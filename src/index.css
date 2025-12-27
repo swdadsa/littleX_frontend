@@ -1,0 +1,22 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap");
+
+@import "tailwindcss";
+
+@layer base {
+  body {
+    min-height: 100vh;
+    font-family: "Space Grotesk", ui-sans-serif, system-ui;
+    color: #1e1c1a;
+    background: radial-gradient(circle at top, #fff6eb 0%, #f4efe9 45%, #ebe0d2 100%);
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  button,
+  input {
+    font-family: "Space Grotesk", ui-sans-serif, system-ui;
+  }
+}
