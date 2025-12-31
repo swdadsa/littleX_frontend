@@ -25,8 +25,12 @@ function normalizePost(post: Post) {
   };
 }
 
-export async function fetchPosts() {
-  const response = await api.get<PostsResponse>("/posts");
+export async function fetchPosts(userId?: number) {
+  const response = userId
+    ? await api.get<PostsResponse>("/posts/getAllPostsByUserId", {
+        params: { user_id: userId }
+      })
+    : await api.get<PostsResponse>("/posts");
 
   if (!response.data.status) {
     throw new Error("Failed to load posts");

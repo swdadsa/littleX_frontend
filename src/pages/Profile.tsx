@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import type { User } from "../api/auth";
-import { fetchUserByUsername, type UserSummary } from "../api/users";
+import { fetchUserById, fetchUserByUsername, type UserSummary } from "../api/users";
 import Comments from "../components/Comments";
 import { usePosts } from "../hooks/usePosts";
 import { formatRelativeTime } from "../utils/time";
@@ -18,7 +18,13 @@ export default function Profile() {
     (currentUser?.username &&
       currentUser.username.toLowerCase() === username.toLowerCase());
   const [openComments, setOpenComments] = useState<Record<number, boolean>>({});
-  const { posts, loading, error, toggleLike, likeLoadingId } = usePosts(isSelf);
+  const [activeUserId, setActiveUserId] = useState<number | undefined>(
+    currentUser?.id
+  );
+  const { posts, loading, error, toggleLike, likeLoadingId } = usePosts(
+    true,
+    activeUserId
+  );
 
   useEffect(() => {
     setUser(getUser());
@@ -30,12 +36,48 @@ export default function Profile() {
 
     if (!username || isSelf) {
       setViewUser(null);
+      setActiveUserId(currentUser?.id);
       return;
     }
 
     fetchUserByUsername(username)
       .then((data) => {
+        if (!active) {
+          return;
+        }
+        if (!data) {
+          setProfileError("User not found.");
+          setViewUser(null);
+          setActiveUserId(undefined);
+          return;
+        }
+        setViewUser(data);
+        setActiveUserId(data.id);
+      })
+      .catch((err) => {
         if (active) {
+          setProfileError(
+            err instanceof Error ? err.message : "Failed to load profile."
+          );
+          setActiveUserId(undefined);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [username, isSelf, currentUser?.id]);
+
+  useEffect(() => {
+    let active = true;
+
+    if (!activeUserId) {
+      return undefined;
+    }
+
+    fetchUserById(activeUserId)
+      .then((data) => {
+        if (active && data) {
           setViewUser(data);
         }
       })
@@ -50,7 +92,7 @@ export default function Profile() {
     return () => {
       active = false;
     };
-  }, [username, isSelf]);
+  }, [activeUserId]);
 
   const profileUser = viewUser ?? user;
 
@@ -157,11 +199,6 @@ export default function Profile() {
             {profileError}
           </div>
         ) : null}
-        {!isSelf ? (
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
-            Posts for this user are not available yet.
-          </div>
-        ) : null}
         <div className="flex flex-col gap-4">
           {loading ? (
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
@@ -178,8 +215,7 @@ export default function Profile() {
               No posts yet.
             </div>
           ) : null}
-          {isSelf &&
-            posts.map((post) => (
+          {posts.map((post) => (
             <article
               key={post.id}
               className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"

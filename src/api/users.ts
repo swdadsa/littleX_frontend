@@ -10,6 +10,7 @@ export type UserSummary = {
   following_count: number;
   posts_count: number;
   avatar_path: string | null;
+  cover_path?: string | null;
 };
 
 export type UserSearchResponse = {
@@ -32,4 +33,19 @@ export async function searchUsers(username: string) {
 export async function fetchUserByUsername(username: string) {
   const users = await searchUsers(username);
   return users.find((user) => user.username === username) ?? users[0] ?? null;
+}
+
+export type UserDetailResponse = {
+  status: boolean;
+  data: UserSummary[];
+};
+
+export async function fetchUserById(userId: number) {
+  const response = await api.get<UserDetailResponse>(`/user/${userId}`);
+
+  if (!response.data.status) {
+    throw new Error("Failed to load user");
+  }
+
+  return response.data.data[0] ?? null;
 }

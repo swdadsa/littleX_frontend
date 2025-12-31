@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchPosts, togglePostLike, type Post } from "../api/posts";
 import { getApiErrorMessage } from "../utils/apiError";
 
-export function usePosts(enabled = true) {
+export function usePosts(enabled = true, userId?: number) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -14,14 +14,14 @@ export function usePosts(enabled = true) {
     setError(null);
 
     try {
-      const data = await fetchPosts();
+      const data = await fetchPosts(userId);
       setPosts(data);
     } catch (err) {
       setError(getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     if (!enabled) {
@@ -66,7 +66,7 @@ export function usePosts(enabled = true) {
     } finally {
       setLikeLoadingId(null);
     }
-  }, []);
+  }, [enabled]);
 
   return { posts, loading, error, reload: loadPosts, toggleLike, likeLoadingId };
 }
