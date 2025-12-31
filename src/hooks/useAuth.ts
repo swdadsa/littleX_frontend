@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { login, type LoginPayload, type LoginResponse } from "../api/auth";
 import { getApiErrorMessage } from "../utils/apiError";
+import { setUser } from "../utils/user";
 
 export function useAuth() {
   const [loading, setLoading] = useState(false);
@@ -12,6 +13,8 @@ export function useAuth() {
 
     try {
       const data: LoginResponse = await login(payload);
+      const { token, ...user } = data.data;
+      setUser(user);
       return data;
     } catch (err) {
       const message = getApiErrorMessage(err);

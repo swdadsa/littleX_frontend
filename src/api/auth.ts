@@ -12,20 +12,16 @@ export type User = {
   name: string;
   username: string;
   description: string | null;
+  follower_count: number;
+  following_count: number;
+  posts_count: number;
   avatar_path: string | null;
-  email_verified_at: string | null;
-  remember_token: string | null;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
+  cover_path: string | null;
 };
 
 export type LoginResponse = {
   status: boolean;
-  data: {
-    user: User;
-    token: string;
-  };
+  data: User & { token: string };
 };
 
 export async function login(payload: LoginPayload) {

@@ -1,68 +1,94 @@
-const posts = [
-  {
-    id: "p1",
-    title: "Quiet launch, big momentum",
-    body: "Our new dashboard is live for early partners. Feedback so far feels sharp.",
-    time: "2h ago",
-    likes: 128,
-    comments: 24
-  },
-  {
-    id: "p2",
-    title: "Design jam recap",
-    body: "Spent the afternoon exploring calmer color systems. Gradient studies ready.",
-    time: "1d ago",
-    likes: 94,
-    comments: 15
-  },
-  {
-    id: "p3",
-    title: "Signal over noise",
-    body: "Keeping the feed tight and relevant with new filters and spaces.",
-    time: "3d ago",
-    likes: 62,
-    comments: 8
-  }
-];
+import { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
+import type { User } from "../api/auth";
+import { fetchUserByUsername, type UserSummary } from "../api/users";
+import Comments from "../components/Comments";
+import { usePosts } from "../hooks/usePosts";
+import { formatRelativeTime } from "../utils/time";
+import { getUser } from "../utils/user";
 
 export default function Profile() {
+  const { username } = useParams();
+  const [user, setUser] = useState<User | null>(null);
+  const [viewUser, setViewUser] = useState<UserSummary | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const currentUser = useMemo(() => getUser(), []);
+  const isSelf =
+    !username ||
+    (currentUser?.username &&
+      currentUser.username.toLowerCase() === username.toLowerCase());
+  const [openComments, setOpenComments] = useState<Record<number, boolean>>({});
+  const { posts, loading, error, toggleLike, likeLoadingId } = usePosts(isSelf);
+
+  useEffect(() => {
+    setUser(getUser());
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    setProfileError(null);
+
+    if (!username || isSelf) {
+      setViewUser(null);
+      return;
+    }
+
+    fetchUserByUsername(username)
+      .then((data) => {
+        if (active) {
+          setViewUser(data);
+        }
+      })
+      .catch((err) => {
+        if (active) {
+          setProfileError(
+            err instanceof Error ? err.message : "Failed to load profile."
+          );
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [username, isSelf]);
+
+  const profileUser = viewUser ?? user;
+
   return (
     <div className="flex flex-col gap-5">
       <section className="flex flex-col gap-4">
-        <div className="h-36 rounded-3xl bg-gradient-to-br from-amber-200 via-orange-300 to-rose-400" />
+        <div className="h-36 overflow-hidden rounded-3xl bg-gradient-to-br from-amber-200 via-orange-300 to-rose-400">
+          {profileUser && "cover_path" in profileUser && profileUser.cover_path ? (
+            <img
+              src={profileUser.cover_path}
+              alt="Cover"
+              className="h-full w-full object-cover"
+            />
+          ) : null}
+        </div>
         <div className="-mt-12 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex items-center gap-4">
-            <div className="h-[72px] w-[72px] rounded-full bg-gradient-to-br from-amber-200 to-emerald-400" />
+            {profileUser?.avatar_path ? (
+              <img
+                src={profileUser.avatar_path}
+                alt={profileUser.name}
+                className="h-[72px] w-[72px] rounded-full object-cover"
+              />
+            ) : (
+              <div className="h-[72px] w-[72px] rounded-full bg-gradient-to-br from-amber-200 to-emerald-400" />
+            )}
             <div>
               <h2 className="text-xl font-semibold text-slate-900">
-                Riley Hart
+                {profileUser?.name ?? "Riley Hart"}
               </h2>
-              <p className="text-sm text-slate-500">@riley.h</p>
+              <p className="text-sm text-slate-500">
+                @{profileUser?.username ?? "riley.h"}
+              </p>
             </div>
           </div>
           <button className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900">
             Edit profile
           </button>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div>
-            <strong className="block text-sm font-semibold text-slate-900">
-              Designer
-            </strong>
-            <span className="text-sm text-slate-500">LittleX Studio</span>
-          </div>
-          <div>
-            <strong className="block text-sm font-semibold text-slate-900">
-              Chicago
-            </strong>
-            <span className="text-sm text-slate-500">GMT-5</span>
-          </div>
-          <div>
-            <strong className="block text-sm font-semibold text-slate-900">
-              Joined
-            </strong>
-            <span className="text-sm text-slate-500">2022</span>
-          </div>
         </div>
       </section>
       <section className="grid gap-5 lg:grid-cols-2">
@@ -72,15 +98,21 @@ export default function Profile() {
           </h3>
           <div className="grid gap-3 sm:grid-cols-3">
             <div>
-              <strong className="block text-2xl text-slate-900">312</strong>
+              <strong className="block text-2xl text-slate-900">
+                {profileUser?.posts_count ?? 0}
+              </strong>
               <span className="text-sm text-slate-500">posts</span>
             </div>
             <div>
-              <strong className="block text-2xl text-slate-900">4.8k</strong>
+              <strong className="block text-2xl text-slate-900">
+                {profileUser?.follower_count ?? 0}
+              </strong>
               <span className="text-sm text-slate-500">followers</span>
             </div>
             <div>
-              <strong className="block text-2xl text-slate-900">620</strong>
+              <strong className="block text-2xl text-slate-900">
+                {profileUser?.following_count ?? 0}
+              </strong>
               <span className="text-sm text-slate-500">following</span>
             </div>
           </div>
@@ -120,23 +152,93 @@ export default function Profile() {
             Filter
           </button>
         </div>
+        {profileError ? (
+          <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+            {profileError}
+          </div>
+        ) : null}
+        {!isSelf ? (
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
+            Posts for this user are not available yet.
+          </div>
+        ) : null}
         <div className="flex flex-col gap-4">
-          {posts.map((post) => (
+          {loading ? (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
+              Loading posts...
+            </div>
+          ) : null}
+          {error ? (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+              {error}
+            </div>
+          ) : null}
+          {!loading && !error && posts.length === 0 ? (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
+              No posts yet.
+            </div>
+          ) : null}
+          {isSelf &&
+            posts.map((post) => (
             <article
               key={post.id}
               className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
             >
               <div>
-                <h4 className="text-base font-semibold text-slate-900">
-                  {post.title}
-                </h4>
-                <p className="mt-2 text-sm text-slate-600">{post.body}</p>
-                <small className="text-xs text-slate-500">{post.time}</small>
+                <div className="mb-3 flex items-center gap-3">
+                  {profileUser?.avatar_path ? (
+                    <img
+                      src={profileUser.avatar_path}
+                      alt={profileUser.name}
+                      className="h-10 w-10 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-amber-200 to-emerald-400" />
+                  )}
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <strong className="block text-sm text-slate-900">
+                        {profileUser?.name ?? "Riley Hart"}
+                      </strong>
+                      <span className="text-[11px] text-slate-400">
+                        {formatRelativeTime(post.created_at)}
+                      </span>
+                    </div>
+                    <span className="text-xs text-slate-500">
+                      @{profileUser?.username ?? "riley.h"}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-sm text-slate-600">{post.body}</p>
               </div>
               <div className="flex flex-wrap gap-3 text-sm text-slate-500">
-                <span>{post.likes} likes</span>
-                <span>{post.comments} comments</span>
+                <button
+                  className={[
+                    "rounded-full px-3 py-1 text-xs font-semibold transition",
+                    post.youalreadyliked
+                      ? "bg-rose-100 text-rose-700"
+                      : "bg-slate-100 text-slate-600 hover:text-slate-900"
+                  ].join(" ")}
+                  onClick={() => toggleLike(post.id)}
+                  disabled={likeLoadingId === post.id}
+                  type="button"
+                >
+                  {post.youalreadyliked ? "取消讚" : "點讚"} {post.likes_count}
+                </button>
+                <button
+                  className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:text-slate-900"
+                  type="button"
+                  onClick={() =>
+                    setOpenComments((prev) => ({
+                      ...prev,
+                      [post.id]: !prev[post.id]
+                    }))
+                  }
+                >
+                  {post.comments_count} comments
+                </button>
               </div>
+              <Comments postId={post.id} open={!!openComments[post.id]} />
             </article>
           ))}
         </div>
