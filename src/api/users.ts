@@ -11,6 +11,8 @@ export type UserSummary = {
   posts_count: number;
   avatar_path: string | null;
   cover_path?: string | null;
+  is_myself?: boolean;
+  is_follow?: boolean;
 };
 
 export type UserSearchResponse = {
@@ -48,4 +50,62 @@ export async function fetchUserById(userId: number) {
   }
 
   return response.data.data[0] ?? null;
+}
+
+export type FollowResponse = {
+  status: boolean;
+  data: string;
+};
+
+export async function followUser(userId: number) {
+  const response = await api.post<FollowResponse>("/follow", {
+    follow_user_id: userId
+  });
+
+  if (!response.data.status) {
+    throw new Error("Failed to follow user");
+  }
+
+  return response.data.data;
+}
+
+export async function unfollowUser(userId: number) {
+  const response = await api.delete<FollowResponse>("/follow", {
+    data: { follow_user_id: userId }
+  });
+
+  if (!response.data.status) {
+    throw new Error("Failed to unfollow user");
+  }
+
+  return response.data.data;
+}
+
+export type FollowListResponse = {
+  status: boolean;
+  data: UserSummary[];
+};
+
+export async function fetchFollowing(userId: number) {
+  const response = await api.get<FollowListResponse>("/follow/following", {
+    params: { user_id: userId }
+  });
+
+  if (!response.data.status) {
+    throw new Error("Failed to load following");
+  }
+
+  return response.data.data;
+}
+
+export async function fetchFollowers(userId: number) {
+  const response = await api.get<FollowListResponse>("/follow/follower", {
+    params: { user_id: userId }
+  });
+
+  if (!response.data.status) {
+    throw new Error("Failed to load followers");
+  }
+
+  return response.data.data;
 }

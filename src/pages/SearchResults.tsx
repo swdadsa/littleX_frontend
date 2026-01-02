@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { searchUsers, type UserSummary } from "../api/users";
 import { getApiErrorMessage } from "../utils/apiError";
@@ -50,7 +50,7 @@ export default function SearchResults() {
       <header className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">Search results</h2>
         <p className="text-sm text-slate-500">
-          Showing users for “{query || "—"}”
+          Showing users for "{query || "-"}"
         </p>
       </header>
       {loading ? (

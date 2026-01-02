@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useCommentActions, useComments } from "../hooks/useComments";
 import { formatRelativeTime } from "../utils/time";
 
@@ -19,41 +19,6 @@ export default function Comments({ postId, open }: CommentsProps) {
 
   return (
     <div className="mt-3 flex flex-col gap-3">
-      <form
-        className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-3"
-        onSubmit={(event) => {
-          event.preventDefault();
-          const trimmed = text.trim();
-          if (!trimmed) {
-            return;
-          }
-          addComment(trimmed).then(() => setText(""));
-        }}
-      >
-        <textarea
-          className="min-h-[72px] w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-700 focus:border-slate-300 focus:outline-none"
-          placeholder="Write a comment..."
-          value={text}
-          onChange={(event) => setText(event.target.value)}
-        />
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] text-slate-400">
-            {text.length}/280
-          </span>
-          <button
-            className="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
-            type="submit"
-            disabled={creating}
-          >
-            {creating ? "Posting..." : "Post"}
-          </button>
-        </div>
-      </form>
-      {loading ? (
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-500">
-          Loading comments...
-        </div>
-      ) : null}
       {error || actionErr ? (
         <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
           {error ?? actionErr}
@@ -100,12 +65,42 @@ export default function Comments({ postId, open }: CommentsProps) {
                 onClick={() => likeComment(comment.id)}
                 disabled={actionLoadingId === comment.id}
               >
-                讚 {comment.likes_count}
+                Likes {comment.likes_count}
               </button>
             </div>
           </div>
         </div>
       ))}
+      <form
+        className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-3"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const trimmed = text.trim();
+          if (!trimmed) {
+            return;
+          }
+          addComment(trimmed).then(() => setText(""));
+        }}
+      >
+        <textarea
+          className="min-h-[72px] w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-700 focus:border-slate-300 focus:outline-none"
+          placeholder="Write a comment..."
+          value={text}
+          onChange={(event) => setText(event.target.value)}
+        />
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] text-slate-400">
+            {text.length}/280
+          </span>
+          <button
+            className="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+            type="submit"
+            disabled={creating}
+          >
+            {creating ? "Posting..." : "Post"}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
