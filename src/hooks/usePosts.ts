@@ -68,5 +68,12 @@ export function usePosts(enabled = true, userId?: number) {
     }
   }, [enabled]);
 
-  return { posts, loading, error, reload: loadPosts, toggleLike, likeLoadingId };
+  return {
+    posts,
+    loading,
+    error,
+    reload: loadPosts,
+    toggleLike,
+    likeLoadingId
+  };
 }

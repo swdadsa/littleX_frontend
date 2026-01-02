@@ -10,6 +10,8 @@ import {
 } from "../api/users";
 import Comments from "../components/Comments";
 import FollowListModal from "../components/FollowListModal";
+import PostComposerModal from "../components/PostComposerModal";
+import { useCreatePost } from "../hooks/useCreatePost";
 import { usePosts } from "../hooks/usePosts";
 import { formatRelativeTime } from "../utils/time";
 import { getUser } from "../utils/user";
@@ -29,13 +31,18 @@ export default function Profile() {
     (currentUser?.username &&
       currentUser.username.toLowerCase() === username.toLowerCase());
   const [openComments, setOpenComments] = useState<Record<number, boolean>>({});
+  const [composerOpen, setComposerOpen] = useState(false);
   const [activeUserId, setActiveUserId] = useState<number | undefined>(
     currentUser?.id
   );
-  const { posts, loading, error, toggleLike, likeLoadingId } = usePosts(
+  const { posts, loading, error, toggleLike, likeLoadingId, reload } = usePosts(
     true,
     activeUserId
   );
+  const { submit, loading: creating, error: createError } = useCreatePost(() => {
+    reload();
+    setComposerOpen(false);
+  });
 
   useEffect(() => {
     setUser(getUser());
@@ -246,9 +253,21 @@ export default function Profile() {
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-base font-semibold text-slate-900">Your posts</h3>
-            <button className="rounded-full px-3 py-2 text-sm text-slate-500 transition hover:text-slate-900">
-              Filter
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                className="rounded-full px-3 py-2 text-sm text-slate-500 transition hover:text-slate-900"
+                type="button"
+              >
+                Filter
+              </button>
+              <button
+                className="rounded-full bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+                type="button"
+                onClick={() => setComposerOpen(true)}
+              >
+                New post
+              </button>
+            </div>
           </div>
           {profileError ? (
             <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
@@ -343,6 +362,21 @@ export default function Profile() {
           onClose={() => setFollowModal(null)}
         />
       ) : null}
+      <PostComposerModal
+        open={composerOpen}
+        loading={creating}
+        error={createError}
+        onClose={() => setComposerOpen(false)}
+        onSubmit={submit}
+      />
+      <button
+        className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-slate-900 text-2xl text-white shadow-lg transition hover:bg-slate-800"
+        type="button"
+        onClick={() => setComposerOpen(true)}
+        aria-label="New post"
+      >
+        +
+      </button>
     </>
   );
 }

@@ -39,6 +39,21 @@ export async function fetchPosts(userId?: number) {
   return response.data.data.map(normalizePost);
 }
 
+export type CreatePostResponse = {
+  status: boolean;
+  data: Post;
+};
+
+export async function createPost(body: string) {
+  const response = await api.post<CreatePostResponse>("/posts", { body });
+
+  if (!response.data.status) {
+    throw new Error("Failed to create post");
+  }
+
+  return response.data.data;
+}
+
 export type LikeResponse = {
   status: boolean;
   data: string;
