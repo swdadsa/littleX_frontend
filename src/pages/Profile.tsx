@@ -9,12 +9,14 @@ import {
   unfollowUser
 } from "../api/users";
 import Comments from "../components/Comments";
+import EditProfileModal from "../components/EditProfileModal";
 import FollowListModal from "../components/FollowListModal";
 import PostComposerModal from "../components/PostComposerModal";
 import { useCreatePost } from "../hooks/useCreatePost";
+import { useUpdateProfile } from "../hooks/useUpdateProfile";
 import { usePosts } from "../hooks/usePosts";
 import { formatRelativeTime } from "../utils/time";
-import { getUser } from "../utils/user";
+import { getUser, setUser } from "../utils/user";
 
 export default function Profile() {
   const { username } = useParams();
@@ -25,6 +27,7 @@ export default function Profile() {
   const [followModal, setFollowModal] = useState<
     "followers" | "following" | null
   >(null);
+  const [editOpen, setEditOpen] = useState(false);
   const currentUser = useMemo(() => getUser(), []);
   const isSelf =
     !username ||
@@ -42,6 +45,34 @@ export default function Profile() {
   const { submit, loading: creating, error: createError } = useCreatePost(() => {
     reload();
     setComposerOpen(false);
+  });
+  const {
+    submit: submitProfile,
+    loading: updating,
+    error: updateError
+  } = useUpdateProfile(async () => {
+    if (!activeUserId) {
+      return;
+    }
+    const fresh = await fetchUserById(activeUserId);
+    if (fresh) {
+      setViewUser(fresh);
+      const localUser = getUser();
+      if (localUser && localUser.id === fresh.id) {
+        setUser({
+          ...localUser,
+          name: fresh.name,
+          username: fresh.username,
+          description: fresh.description ?? null,
+          avatar_path: fresh.avatar_path ?? null,
+          cover_path: "cover_path" in fresh ? fresh.cover_path ?? null : null,
+          follower_count: fresh.follower_count,
+          following_count: fresh.following_count,
+          posts_count: fresh.posts_count
+        });
+      }
+    }
+    setEditOpen(false);
   });
 
   useEffect(() => {
@@ -179,7 +210,11 @@ export default function Profile() {
                 {profileUser?.is_follow ? "Following" : "Follow"}
               </button>
             ) : (
-              <button className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900">
+              <button
+                className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                type="button"
+                onClick={() => setEditOpen(true)}
+              >
                 Edit profile
               </button>
             )}
@@ -362,6 +397,19 @@ export default function Profile() {
           onClose={() => setFollowModal(null)}
         />
       ) : null}
+      <EditProfileModal
+        open={editOpen}
+        user={profileUser}
+        loading={updating}
+        error={updateError}
+        onClose={() => setEditOpen(false)}
+        onSubmit={(payload) => {
+          if (!activeUserId) {
+            return Promise.resolve();
+          }
+          return submitProfile(activeUserId, payload);
+        }}
+      />
       <PostComposerModal
         open={composerOpen}
         loading={creating}

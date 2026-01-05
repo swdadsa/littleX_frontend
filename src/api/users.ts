@@ -81,6 +81,48 @@ export async function unfollowUser(userId: number) {
   return response.data.data;
 }
 
+export type UpdateUserResponse = {
+  status: boolean;
+  data: string;
+};
+
+export type UpdateUserPayload = {
+  email: string;
+  name: string;
+  username: string;
+  description: string;
+  avatar_image?: File | null;
+  cover_image?: File | null;
+};
+
+export async function updateUserProfile(
+  userId: number,
+  payload: UpdateUserPayload
+) {
+  const form = new FormData();
+  form.append("email", payload.email);
+  form.append("name", payload.name);
+  form.append("username", payload.username);
+  form.append("description", payload.description ?? "");
+
+  if (payload.avatar_image) {
+    form.append("avatar_image", payload.avatar_image);
+  }
+  if (payload.cover_image) {
+    form.append("cover_image", payload.cover_image);
+  }
+
+  const response = await api.post<UpdateUserResponse>(`/user/${userId}`, form, {
+    headers: { "Content-Type": "multipart/form-data" }
+  });
+
+  if (!response.data.status) {
+    throw new Error("Failed to update profile");
+  }
+
+  return response.data.data;
+}
+
 export type FollowListResponse = {
   status: boolean;
   data: UserSummary[];
