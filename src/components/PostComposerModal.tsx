@@ -5,7 +5,7 @@ type PostComposerModalProps = {
   loading: boolean;
   error?: string | null;
   onClose: () => void;
-  onSubmit: (body: string, images?: File[]) => Promise<void>;
+  onSubmit: (body: string, images?: File[], hashtags?: string[]) => Promise<void>;
 };
 
 export default function PostComposerModal({
@@ -17,6 +17,8 @@ export default function PostComposerModal({
 }: PostComposerModalProps) {
   const [text, setText] = useState("");
   const [images, setImages] = useState<File[]>([]);
+  const [hashtagInput, setHashtagInput] = useState("");
+  const [hashtags, setHashtags] = useState<string[]>([]);
   const previews = images.map((file) => ({
     name: file.name,
     url: URL.createObjectURL(file)
@@ -60,16 +62,22 @@ export default function PostComposerModal({
           </div>
         ) : null}
         <form
-          className="flex flex-col gap-3"
+          className="flex min-h-[420px] flex-col gap-3"
           onSubmit={(event) => {
             event.preventDefault();
             const trimmed = text.trim();
             if (!trimmed) {
               return;
             }
-            onSubmit(trimmed, images).then(() => {
+            const tags = hashtags.slice(0, 5);
+            const pending = hashtagInput.trim().replace(/^#/, "");
+            const finalTags =
+              pending && tags.length < 5 ? [...tags, pending] : tags;
+            onSubmit(trimmed, images, finalTags).then(() => {
               setText("");
               setImages([]);
+              setHashtagInput("");
+              setHashtags([]);
             });
           }}
         >
@@ -81,13 +89,6 @@ export default function PostComposerModal({
           />
           <div className="flex items-center justify-between">
             <span className="text-xs text-slate-400">{text.length}/280</span>
-            <button
-              className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
-              type="submit"
-              disabled={loading}
-            >
-              {loading ? "Posting..." : "Post"}
-            </button>
           </div>
           <div className="flex flex-col gap-2 text-sm text-slate-600">
             <label className="inline-flex items-center justify-center rounded-full border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-900">
@@ -111,6 +112,59 @@ export default function PostComposerModal({
                 : "Up to 15 images"}
             </span>
           </div>
+          <label className="flex flex-col gap-2 text-sm text-slate-600">
+            Hashtags (space to add, up to 5)
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 px-3 py-2">
+              {hashtags.map((tag) => (
+                <span
+                  key={tag}
+                  className="flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600"
+                >
+                  #{tag}
+                  <button
+                    className="text-slate-400 transition hover:text-slate-700"
+                    type="button"
+                    onClick={() =>
+                      setHashtags((prev) => prev.filter((item) => item !== tag))
+                    }
+                    aria-label={`Remove hashtag ${tag}`}
+                  >
+                    x
+                  </button>
+                </span>
+              ))}
+              {hashtags.length < 5 ? (
+                <input
+                  className="min-w-[120px] flex-1 border-none text-sm text-slate-700 focus:outline-none"
+                  placeholder={hashtags.length === 0 ? "type hashtag" : ""}
+                  value={hashtagInput}
+                  onChange={(event) => setHashtagInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Backspace" && hashtagInput.length === 0) {
+                      setHashtags((prev) => prev.slice(0, -1));
+                      return;
+                    }
+                    if (event.key !== " " && event.key !== "Enter") {
+                      return;
+                    }
+                    event.preventDefault();
+                    const next = hashtagInput.trim().replace(/^#/, "");
+                    if (!next) {
+                      return;
+                    }
+                    setHashtags((prev) =>
+                      prev.length < 5 && !prev.includes(next)
+                        ? [...prev, next]
+                        : prev
+                    );
+                    setHashtagInput("");
+                  }}
+                />
+              ) : (
+                <span className="text-xs text-slate-400">Max 5</span>
+              )}
+            </div>
+          </label>
           {images.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {previews.map((preview) => (
@@ -127,6 +181,15 @@ export default function PostComposerModal({
               ))}
             </div>
           ) : null}
+          <div className="mt-auto flex items-center justify-end">
+            <button
+              className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+              type="submit"
+              disabled={loading}
+            >
+              {loading ? "Posting..." : "Post"}
+            </button>
+          </div>
         </form>
       </div>
     </div>

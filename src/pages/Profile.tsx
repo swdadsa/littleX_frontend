@@ -357,6 +357,18 @@ export default function Profile() {
                     </div>
                   </div>
                 <p className="text-sm text-slate-600">{post.body}</p>
+                {post.hashtag && post.hashtag.length > 0 ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {post.hashtag.map((tag) => (
+                      <span
+                        key={`${post.id}-${tag.id}`}
+                        className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600"
+                      >
+                        #{tag.hashtag}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
                 <PostImageCarousel images={post.image ?? []} />
               </div>
                 <div className="flex flex-wrap gap-3 text-sm text-slate-500">

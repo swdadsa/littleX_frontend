@@ -7,12 +7,12 @@ export function useCreatePost(onSuccess?: () => void) {
   const [error, setError] = useState<string | null>(null);
 
   const submit = useCallback(
-    async (body: string, images?: File[]) => {
+    async (body: string, images?: File[], hashtags?: string[]) => {
       setLoading(true);
       setError(null);
 
       try {
-        await createPost(body, images);
+        await createPost(body, images, hashtags);
         onSuccess?.();
       } catch (err) {
         setError(getApiErrorMessage(err));

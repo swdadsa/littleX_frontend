@@ -71,20 +71,20 @@ export default function PostImageCarousel({ images }: PostImageCarouselProps) {
             onClick={(event) => event.stopPropagation()}
             role="presentation"
           >
-            <button
-              className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white transition hover:bg-black/90"
-              type="button"
-              onClick={() => setOpen(false)}
-              aria-label="Close"
-            >
-              x
-            </button>
             <img
               src={current.image_path}
               alt={`Post image ${index + 1}`}
               className="max-h-[90vh] w-full rounded-2xl object-contain"
             />
           </div>
+          <button
+            className="fixed right-6 top-6 flex h-10 w-10 items-center justify-center rounded-full bg-black/70 text-white transition hover:bg-black/90"
+            type="button"
+            onClick={() => setOpen(false)}
+            aria-label="Close"
+          >
+            x
+          </button>
         </div>
       ) : null}
     </div>

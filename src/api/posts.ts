@@ -11,6 +11,15 @@ export type Post = {
     order: number;
     image_path: string;
   }[];
+  hashtag: {
+    id: number;
+    order: number;
+    post_id: number;
+    hashtag: string;
+    created_at: string;
+    updated_at: string;
+    deleted_at: string | null;
+  }[];
   youalreadyliked: boolean;
   created_at: string;
 };
@@ -49,11 +58,18 @@ export type CreatePostResponse = {
   data: Post;
 };
 
-export async function createPost(body: string, images?: File[]) {
+export async function createPost(
+  body: string,
+  images?: File[],
+  hashtags?: string[]
+) {
   const form = new FormData();
   form.append("body", body);
   (images ?? []).slice(0, 15).forEach((file, index) => {
     form.append(`image[${index}]`, file);
+  });
+  (hashtags ?? []).slice(0, 5).forEach((tag, index) => {
+    form.append(`hashtag[${index}]`, tag);
   });
 
   const response = await api.post<CreatePostResponse>("/posts", form, {
