@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type PostComposerModalProps = {
   open: boolean;
   loading: boolean;
   error?: string | null;
   onClose: () => void;
-  onSubmit: (body: string) => Promise<void>;
+  onSubmit: (body: string, images?: File[]) => Promise<void>;
 };
 
 export default function PostComposerModal({
@@ -16,6 +16,17 @@ export default function PostComposerModal({
   onSubmit
 }: PostComposerModalProps) {
   const [text, setText] = useState("");
+  const [images, setImages] = useState<File[]>([]);
+  const previews = images.map((file) => ({
+    name: file.name,
+    url: URL.createObjectURL(file)
+  }));
+
+  useEffect(() => {
+    return () => {
+      previews.forEach((preview) => URL.revokeObjectURL(preview.url));
+    };
+  }, [previews]);
 
   if (!open) {
     return null;
@@ -56,7 +67,10 @@ export default function PostComposerModal({
             if (!trimmed) {
               return;
             }
-            onSubmit(trimmed).then(() => setText(""));
+            onSubmit(trimmed, images).then(() => {
+              setText("");
+              setImages([]);
+            });
           }}
         >
           <textarea
@@ -75,6 +89,44 @@ export default function PostComposerModal({
               {loading ? "Posting..." : "Post"}
             </button>
           </div>
+          <div className="flex flex-col gap-2 text-sm text-slate-600">
+            <label className="inline-flex items-center justify-center rounded-full border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-900">
+              Add photos
+              <input
+                className="hidden"
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(event) => {
+                  const files = event.target.files
+                    ? Array.from(event.target.files)
+                    : [];
+                  setImages(files.slice(0, 15));
+                }}
+              />
+            </label>
+            <span className="text-[11px] text-slate-400">
+              {images.length > 0
+                ? `${images.length} file(s) selected`
+                : "Up to 15 images"}
+            </span>
+          </div>
+          {images.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {previews.map((preview) => (
+                <div
+                  key={preview.name}
+                  className="h-16 w-16 overflow-hidden rounded-lg border border-slate-200"
+                >
+                  <img
+                    src={preview.url}
+                    alt={preview.name}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+          ) : null}
         </form>
       </div>
     </div>

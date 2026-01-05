@@ -6,6 +6,11 @@ export type Post = {
   body: string;
   likes_count: number;
   comments_count: number;
+  image: {
+    id: number;
+    order: number;
+    image_path: string;
+  }[];
   youalreadyliked: boolean;
   created_at: string;
 };
@@ -44,8 +49,16 @@ export type CreatePostResponse = {
   data: Post;
 };
 
-export async function createPost(body: string) {
-  const response = await api.post<CreatePostResponse>("/posts", { body });
+export async function createPost(body: string, images?: File[]) {
+  const form = new FormData();
+  form.append("body", body);
+  (images ?? []).slice(0, 15).forEach((file, index) => {
+    form.append(`image[${index}]`, file);
+  });
+
+  const response = await api.post<CreatePostResponse>("/posts", form, {
+    headers: { "Content-Type": "multipart/form-data" }
+  });
 
   if (!response.data.status) {
     throw new Error("Failed to create post");

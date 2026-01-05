@@ -57,15 +57,6 @@ export default function Shell() {
             Sign out
           </NavLink>
         </nav>
-          <div className="hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:block">
-            <h4 className="mb-2 text-base font-semibold">Post something</h4>
-            <p className="mb-4 text-sm text-slate-500">
-              Draft a short update to share with your circle.
-            </p>
-            <button className="rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-orange-600">
-              Compose
-            </button>
-          </div>
         </aside>
         <main className="flex min-h-0 flex-col gap-6">
           <header className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">

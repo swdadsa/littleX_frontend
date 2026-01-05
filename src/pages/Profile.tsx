@@ -12,6 +12,7 @@ import Comments from "../components/Comments";
 import EditProfileModal from "../components/EditProfileModal";
 import FollowListModal from "../components/FollowListModal";
 import PostComposerModal from "../components/PostComposerModal";
+import PostImageCarousel from "../components/PostImageCarousel";
 import { useCreatePost } from "../hooks/useCreatePost";
 import { useUpdateProfile } from "../hooks/useUpdateProfile";
 import { usePosts } from "../hooks/usePosts";
@@ -355,8 +356,9 @@ export default function Profile() {
                       </span>
                     </div>
                   </div>
-                  <p className="text-sm text-slate-600">{post.body}</p>
-                </div>
+                <p className="text-sm text-slate-600">{post.body}</p>
+                <PostImageCarousel images={post.image ?? []} />
+              </div>
                 <div className="flex flex-wrap gap-3 text-sm text-slate-500">
                   <button
                     className={[
