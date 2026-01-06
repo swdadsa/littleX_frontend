@@ -1,13 +1,10 @@
 ﻿import { FormEvent, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { followUser } from "../api/users";
+import { useRecommendFollow } from "../hooks/useRecommendFollow";
 import { useTrendingHashtags } from "../hooks/useTrendingHashtags";
 import { useUserSearch } from "../hooks/useUserSearch";
-
-const suggestions = [
-  { name: "Alex M", role: "Product" },
-  { name: "Nova Liu", role: "Engineer" },
-  { name: "Cam Reed", role: "Writer" }
-];
+import { getApiErrorMessage } from "../utils/apiError";
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
   [
@@ -27,6 +24,13 @@ export default function Shell() {
     loading: trendingLoading,
     error: trendingError
   } = useTrendingHashtags();
+  const {
+    users: suggestions,
+    loading: suggestionsLoading,
+    error: suggestionsError
+  } = useRecommendFollow();
+  const [followingIds, setFollowingIds] = useState<number[]>([]);
+  const [followLoadingId, setFollowLoadingId] = useState<number | null>(null);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -160,19 +164,61 @@ export default function Shell() {
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h3 className="mb-3 text-base font-semibold">Who to follow</h3>
             <div className="flex flex-col gap-4">
+              {suggestionsLoading ? (
+                <div className="text-xs text-slate-500">Loading...</div>
+              ) : null}
+              {suggestionsError ? (
+                <div className="text-xs text-rose-600">{suggestionsError}</div>
+              ) : null}
+              {!suggestionsLoading && !suggestionsError && suggestions.length === 0 ? (
+                <div className="text-xs text-slate-500">No suggestions yet.</div>
+              ) : null}
               {suggestions.map((item) => (
-                <div key={item.name} className="flex items-center gap-3">
-                  <div className="h-11 w-11 rounded-full bg-gradient-to-br from-amber-200 to-emerald-400" />
+                <button
+                  key={item.id}
+                  className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left transition hover:bg-slate-50"
+                  type="button"
+                  onClick={() => navigate(`/profile/${item.username}`)}
+                >
+                  {item.avatar_path ? (
+                    <img
+                      src={item.avatar_path}
+                      alt={item.name}
+                      className="h-11 w-11 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-11 w-11 rounded-full bg-gradient-to-br from-amber-200 to-emerald-400" />
+                  )}
                   <div className="flex-1">
                     <strong className="block text-sm">{item.name}</strong>
                     <small className="text-xs text-slate-500">
-                      {item.role}
+                      @{item.username}
                     </small>
                   </div>
-                  <button className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900">
-                    Follow
+                  <button
+                    className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-70"
+                    type="button"
+                    disabled={
+                      followLoadingId === item.id ||
+                      followingIds.includes(item.id)
+                    }
+                    onClick={async (event) => {
+                      event.stopPropagation();
+                      setFollowLoadingId(item.id);
+                      try {
+                        await followUser(item.id);
+                        setFollowingIds((prev) => [...prev, item.id]);
+                      } catch (err) {
+                        const message = getApiErrorMessage(err);
+                        alert(message);
+                      } finally {
+                        setFollowLoadingId(null);
+                      }
+                    }}
+                  >
+                    {followingIds.includes(item.id) ? "Following" : "Follow"}
                   </button>
-                </div>
+                </button>
               ))}
             </div>
           </div>

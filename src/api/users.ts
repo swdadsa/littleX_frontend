@@ -151,3 +151,20 @@ export async function fetchFollowers(userId: number) {
 
   return response.data.data;
 }
+
+export type RecommendFollowResponse = {
+  status: boolean;
+  data: Pick<UserSummary, "id" | "name" | "username" | "description" | "avatar_path">[];
+};
+
+export async function fetchRecommendFollow() {
+  const response = await api.get<RecommendFollowResponse>(
+    "/follow/getRecommendFollow"
+  );
+
+  if (!response.data.status) {
+    throw new Error("Failed to load recommendations");
+  }
+
+  return response.data.data;
+}
