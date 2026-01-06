@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { fetchPosts, togglePostLike, type Post } from "../api/posts";
+import { deletePost, fetchPosts, togglePostLike, type Post } from "../api/posts";
 import { getApiErrorMessage } from "../utils/apiError";
 
 export function usePosts(enabled = true, userId?: number) {
@@ -7,6 +7,7 @@ export function usePosts(enabled = true, userId?: number) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [likeLoadingId, setLikeLoadingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const snapshotRef = useRef<Post[] | null>(null);
 
   const loadPosts = useCallback(async () => {
@@ -68,12 +69,29 @@ export function usePosts(enabled = true, userId?: number) {
     }
   }, [enabled]);
 
+  const removePost = useCallback(async (postId: number) => {
+    setDeletingId(postId);
+    setError(null);
+    try {
+      await deletePost(postId);
+      setPosts((prev) => prev.filter((post) => post.id !== postId));
+    } catch (err) {
+      const message = getApiErrorMessage(err);
+      setError(message);
+      throw err;
+    } finally {
+      setDeletingId(null);
+    }
+  }, []);
+
   return {
     posts,
     loading,
     error,
     reload: loadPosts,
     toggleLike,
-    likeLoadingId
+    likeLoadingId,
+    removePost,
+    deletingId
   };
 }

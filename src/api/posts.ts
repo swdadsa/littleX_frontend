@@ -58,6 +58,11 @@ export type CreatePostResponse = {
   data: Post;
 };
 
+export type DeletePostResponse = {
+  status: boolean;
+  data: string;
+};
+
 export async function createPost(
   body: string,
   images?: File[],
@@ -78,6 +83,36 @@ export async function createPost(
 
   if (!response.data.status) {
     throw new Error("Failed to create post");
+  }
+
+  return response.data.data;
+}
+
+export async function deletePost(postId: number) {
+  const response = await api.delete<DeletePostResponse>(`/posts/${postId}`);
+
+  if (!response.data.status) {
+    throw new Error(response.data.data || "Failed to delete post");
+  }
+
+  return response.data.data;
+}
+
+export type TrendingHashtag = {
+  hashtag: string;
+  count: number;
+};
+
+export type TrendingHashtagResponse = {
+  status: boolean;
+  data: TrendingHashtag[];
+};
+
+export async function fetchTrendingHashtags() {
+  const response = await api.get<TrendingHashtagResponse>("/posts/weekHashtag");
+
+  if (!response.data.status) {
+    throw new Error("Failed to load trending hashtags");
   }
 
   return response.data.data;

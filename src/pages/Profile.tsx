@@ -13,15 +13,17 @@ import EditProfileModal from "../components/EditProfileModal";
 import FollowListModal from "../components/FollowListModal";
 import PostComposerModal from "../components/PostComposerModal";
 import PostImageCarousel from "../components/PostImageCarousel";
+import Toast from "../components/Toast";
 import { useCreatePost } from "../hooks/useCreatePost";
 import { useUpdateProfile } from "../hooks/useUpdateProfile";
 import { usePosts } from "../hooks/usePosts";
+import { getApiErrorMessage } from "../utils/apiError";
 import { formatRelativeTime } from "../utils/time";
 import { getUser, setUser } from "../utils/user";
 
 export default function Profile() {
   const { username } = useParams();
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUserState] = useState<User | null>(null);
   const [viewUser, setViewUser] = useState<UserSummary | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [followLoading, setFollowLoading] = useState(false);
@@ -39,13 +41,27 @@ export default function Profile() {
   const [activeUserId, setActiveUserId] = useState<number | undefined>(
     currentUser?.id
   );
-  const { posts, loading, error, toggleLike, likeLoadingId, reload } = usePosts(
-    true,
-    activeUserId
-  );
+  const [toast, setToast] = useState<{
+    message: string;
+    type?: "success" | "error";
+  } | null>(null);
+  const {
+    posts,
+    loading,
+    error,
+    toggleLike,
+    likeLoadingId,
+    reload,
+    removePost,
+    deletingId
+  } = usePosts(true, activeUserId);
+  const [menuOpen, setMenuOpen] = useState<number | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const { submit, loading: creating, error: createError } = useCreatePost(() => {
     reload();
     setComposerOpen(false);
+    setToast({ message: "Post created.", type: "success" });
   });
   const {
     submit: submitProfile,
@@ -74,11 +90,20 @@ export default function Profile() {
       }
     }
     setEditOpen(false);
+    setToast({ message: "Profile updated.", type: "success" });
   });
 
   useEffect(() => {
-    setUser(getUser());
+    setUserState(getUser());
   }, []);
+
+  useEffect(() => {
+    if (!toast) {
+      return undefined;
+    }
+    const handle = window.setTimeout(() => setToast(null), 2500);
+    return () => window.clearTimeout(handle);
+  }, [toast]);
 
   useEffect(() => {
     let active = true;
@@ -144,15 +169,60 @@ export default function Profile() {
     };
   }, [activeUserId]);
 
+  useEffect(() => {
+    if (createError) {
+      setToast({ message: createError, type: "error" });
+    }
+  }, [createError]);
+
+  useEffect(() => {
+    if (updateError) {
+      setToast({ message: updateError, type: "error" });
+    }
+  }, [updateError]);
+
+  useEffect(() => {
+    if (error) {
+      setToast({ message: error, type: "error" });
+    }
+  }, [error]);
+
   const profileUser = viewUser ?? user;
   const canFollow = profileUser ? profileUser.is_myself === false : false;
+
+  const handleCreatePost = async (
+    body: string,
+    images?: File[],
+    hashtags?: string[]
+  ) => {
+    try {
+      await submit(body, images, hashtags);
+    } catch (err) {
+      setToast({ message: getApiErrorMessage(err), type: "error" });
+      throw err;
+    }
+  };
+
+  const handleUpdateProfile = async (payload: Parameters<typeof submitProfile>[1]) => {
+    if (!activeUserId) {
+      return Promise.resolve();
+    }
+    try {
+      await submitProfile(activeUserId, payload);
+    } catch (err) {
+      setToast({ message: getApiErrorMessage(err), type: "error" });
+      throw err;
+    }
+  };
 
   return (
     <>
       <div className="flex flex-col gap-5">
         <section className="flex flex-col gap-4">
           <div className="h-36 overflow-hidden rounded-3xl bg-gradient-to-br from-amber-200 via-orange-300 to-rose-400">
-            {profileUser && "cover_path" in profileUser && profileUser.cover_path ? (
+            {profileUser &&
+            "cover_path" in profileUser &&
+            profileUser.cover_path ? (
               <img
                 src={profileUser.cover_path}
                 alt="Cover"
@@ -197,10 +267,14 @@ export default function Profile() {
                     if (profileUser.is_follow) {
                       await unfollowUser(profileUser.id);
                       setViewUser({ ...profileUser, is_follow: false });
+                      setToast({ message: "Unfollowed user.", type: "success" });
                     } else {
                       await followUser(profileUser.id);
                       setViewUser({ ...profileUser, is_follow: true });
+                      setToast({ message: "Followed user.", type: "success" });
                     }
+                  } catch (err) {
+                    setToast({ message: getApiErrorMessage(err), type: "error" });
                   } finally {
                     setFollowLoading(false);
                   }
@@ -332,45 +406,75 @@ export default function Profile() {
                 className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
               >
                 <div>
-                  <div className="mb-3 flex items-center gap-3">
-                    {profileUser?.avatar_path ? (
-                      <img
-                        src={profileUser.avatar_path}
-                        alt={profileUser.name}
-                        className="h-10 w-10 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-amber-200 to-emerald-400" />
-                    )}
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <strong className="block text-sm text-slate-900">
-                          {profileUser?.name ?? "Riley Hart"}
-                        </strong>
-                        <span className="text-[11px] text-slate-400">
-                          {formatRelativeTime(post.created_at)}
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      {profileUser?.avatar_path ? (
+                        <img
+                          src={profileUser.avatar_path}
+                          alt={profileUser.name}
+                          className="h-10 w-10 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-amber-200 to-emerald-400" />
+                      )}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <strong className="block text-sm text-slate-900">
+                            {profileUser?.name ?? "Riley Hart"}
+                          </strong>
+                          <span className="text-[11px] text-slate-400">
+                            {formatRelativeTime(post.created_at)}
+                          </span>
+                        </div>
+                        <span className="text-xs text-slate-500">
+                          @{profileUser?.username ?? "riley.h"}
                         </span>
                       </div>
-                      <span className="text-xs text-slate-500">
-                        @{profileUser?.username ?? "riley.h"}
-                      </span>
+                    </div>
+                    <div className="relative">
+                      <button
+                        className="rounded-full px-2 py-1 text-lg text-slate-500 transition hover:text-slate-900"
+                        type="button"
+                        onClick={() =>
+                          setMenuOpen((prev) =>
+                            prev === post.id ? null : post.id
+                          )
+                        }
+                        aria-label="Post actions"
+                      >
+                        ...
+                      </button>
+                      {menuOpen === post.id ? (
+                        <div className="absolute right-0 z-10 mt-2 w-32 rounded-xl border border-slate-200 bg-white p-1 shadow-lg">
+                          <button
+                            className="w-full rounded-lg px-3 py-2 text-left text-sm text-rose-600 transition hover:bg-rose-50"
+                            type="button"
+                            onClick={() => {
+                              setMenuOpen(null);
+                              setConfirmDeleteId(post.id);
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      ) : null}
                     </div>
                   </div>
-                <p className="text-sm text-slate-600">{post.body}</p>
-                {post.hashtag && post.hashtag.length > 0 ? (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {post.hashtag.map((tag) => (
-                      <span
-                        key={`${post.id}-${tag.id}`}
-                        className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600"
-                      >
-                        #{tag.hashtag}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
-                <PostImageCarousel images={post.image ?? []} />
-              </div>
+                  <p className="text-sm text-slate-600">{post.body}</p>
+                  {post.hashtag && post.hashtag.length > 0 ? (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {post.hashtag.map((tag) => (
+                        <span
+                          key={`${post.id}-${tag.id}`}
+                          className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600"
+                        >
+                          #{tag.hashtag}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                  <PostImageCarousel images={post.image ?? []} />
+                </div>
                 <div className="flex flex-wrap gap-3 text-sm text-slate-500">
                   <button
                     className={[
@@ -411,25 +515,84 @@ export default function Profile() {
           onClose={() => setFollowModal(null)}
         />
       ) : null}
+      {confirmDeleteId ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+          onClick={() => {
+            setConfirmDeleteId(null);
+            setDeleteError(null);
+          }}
+          role="presentation"
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-4 shadow-lg"
+            onClick={(event) => event.stopPropagation()}
+            role="presentation"
+          >
+            <h3 className="text-base font-semibold text-slate-900">
+              Delete post?
+            </h3>
+            <p className="mt-2 text-sm text-slate-500">
+              This action cannot be undone.
+            </p>
+            {deleteError ? (
+              <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
+                {deleteError}
+              </div>
+            ) : null}
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button
+                className="rounded-full px-4 py-2 text-sm text-slate-600 transition hover:text-slate-900"
+                type="button"
+                onClick={() => {
+                  setConfirmDeleteId(null);
+                  setDeleteError(null);
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-70"
+                type="button"
+                disabled={deletingId === confirmDeleteId}
+                onClick={async () => {
+                  if (!confirmDeleteId) {
+                    return;
+                  }
+                  try {
+                    await removePost(confirmDeleteId);
+                    setConfirmDeleteId(null);
+                    setToast({ message: "Post deleted.", type: "success" });
+                  } catch (err) {
+                    setDeleteError(
+                      err instanceof Error
+                        ? err.message
+                        : "Failed to delete post."
+                    );
+                    setToast({ message: getApiErrorMessage(err), type: "error" });
+                  }
+                }}
+              >
+                {deletingId === confirmDeleteId ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <EditProfileModal
         open={editOpen}
         user={profileUser}
         loading={updating}
         error={updateError}
         onClose={() => setEditOpen(false)}
-        onSubmit={(payload) => {
-          if (!activeUserId) {
-            return Promise.resolve();
-          }
-          return submitProfile(activeUserId, payload);
-        }}
+        onSubmit={handleUpdateProfile}
       />
       <PostComposerModal
         open={composerOpen}
         loading={creating}
         error={createError}
         onClose={() => setComposerOpen(false)}
-        onSubmit={submit}
+        onSubmit={handleCreatePost}
       />
       <button
         className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-slate-900 text-2xl text-white shadow-lg transition hover:bg-slate-800"
@@ -439,6 +602,11 @@ export default function Profile() {
       >
         +
       </button>
+      {toast ? (
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2">
+          <Toast message={toast.message} type={toast.type} />
+        </div>
+      ) : null}
     </>
   );
 }

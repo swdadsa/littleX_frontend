@@ -35,7 +35,7 @@ export default function PostImageCarousel({ images }: PostImageCarouselProps) {
       />
       {sorted.length > 1 ? (
         <>
-          <button
+            <button
             className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/50 px-3 py-2 text-sm font-semibold text-white transition hover:bg-black/70"
             type="button"
             onClick={() =>
@@ -43,7 +43,7 @@ export default function PostImageCarousel({ images }: PostImageCarouselProps) {
             }
             aria-label="Previous image"
           >
-            ←
+            &lt;
           </button>
           <button
             className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-black/50 px-3 py-2 text-sm font-semibold text-white transition hover:bg-black/70"
@@ -53,7 +53,7 @@ export default function PostImageCarousel({ images }: PostImageCarouselProps) {
             }
             aria-label="Next image"
           >
-            →
+            &gt;
           </button>
           <div className="absolute bottom-3 right-3 rounded-full bg-black/60 px-2 py-1 text-xs text-white">
             {index + 1}/{sorted.length}

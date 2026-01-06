@@ -1,13 +1,7 @@
-import { FormEvent, useState } from "react";
+﻿import { FormEvent, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useTrendingHashtags } from "../hooks/useTrendingHashtags";
 import { useUserSearch } from "../hooks/useUserSearch";
-
-const trending = [
-  { tag: "#DesignOps", posts: "2,140 posts" },
-  { tag: "#ViteStack", posts: "980 posts" },
-  { tag: "#LittleX", posts: "740 posts" },
-  { tag: "#FrontRow", posts: "412 posts" }
-];
 
 const suggestions = [
   { name: "Alex M", role: "Product" },
@@ -28,6 +22,11 @@ export default function Shell() {
   const [query, setQuery] = useState("");
   const [focused, setFocused] = useState(false);
   const { results, loading } = useUserSearch(query);
+  const {
+    hashtags: trending,
+    loading: trendingLoading,
+    error: trendingError
+  } = useTrendingHashtags();
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -50,13 +49,13 @@ export default function Shell() {
             <NavLink className={linkClass} to="/explore">
               Explore
             </NavLink>
-          <NavLink className={linkClass} to="/profile">
-            Profile
-          </NavLink>
-          <NavLink className={linkClass} to="/login">
-            Sign out
-          </NavLink>
-        </nav>
+            <NavLink className={linkClass} to="/profile">
+              Profile
+            </NavLink>
+            <NavLink className={linkClass} to="/login">
+              Sign out
+            </NavLink>
+          </nav>
         </aside>
         <main className="flex min-h-0 flex-col gap-6">
           <header className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
@@ -134,15 +133,26 @@ export default function Shell() {
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h3 className="mb-3 text-base font-semibold">Trending</h3>
             <div className="flex flex-col gap-4">
+              {trendingLoading ? (
+                <div className="text-xs text-slate-500">Loading...</div>
+              ) : null}
+              {trendingError ? (
+                <div className="text-xs text-rose-600">{trendingError}</div>
+              ) : null}
+              {!trendingLoading && !trendingError && trending.length === 0 ? (
+                <div className="text-xs text-slate-500">No trends yet.</div>
+              ) : null}
               {trending.map((item) => (
                 <div
-                  key={item.tag}
+                  key={item.hashtag}
                   className="flex items-center justify-between gap-3"
                 >
                   <span className="text-sm font-medium text-slate-800">
-                    {item.tag}
+                    #{item.hashtag}
                   </span>
-                  <small className="text-xs text-slate-500">{item.posts}</small>
+                  <small className="text-xs text-slate-500">
+                    {item.count}
+                  </small>
                 </div>
               ))}
             </div>
