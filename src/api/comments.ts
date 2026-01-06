@@ -9,6 +9,7 @@ export type Comment = {
   user_avatar: string | null;
   comment: string;
   likes_count: number;
+  youalreadyliked: boolean;
   created_at: string;
   updated_at: string;
 };

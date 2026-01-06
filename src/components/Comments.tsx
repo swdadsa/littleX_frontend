@@ -60,12 +60,17 @@ export default function Comments({ postId, open }: CommentsProps) {
             <p className="mt-1 text-xs text-slate-600">{comment.comment}</p>
             <div className="mt-2 flex items-center gap-2 text-[11px] text-slate-500">
               <button
-                className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600 transition hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-70"
+                className={[
+                  "rounded-full px-2 py-1 text-[11px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-70",
+                  comment.youalreadyliked
+                    ? "bg-rose-100 text-rose-700"
+                    : "bg-slate-100 text-slate-600 hover:text-slate-900"
+                ].join(" ")}
                 type="button"
                 onClick={() => likeComment(comment.id)}
                 disabled={actionLoadingId === comment.id}
               >
-                Likes {comment.likes_count}
+                {comment.youalreadyliked ? "Unlike" : "Like"} {comment.likes_count}
               </button>
             </div>
           </div>
