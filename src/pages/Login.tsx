@@ -1,5 +1,6 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
+import Toast from "../components/Toast";
 import { useAuth } from "../hooks/useAuth";
 
 export default function Login() {
@@ -7,13 +8,23 @@ export default function Login() {
   const { login, loading, error } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!toast) {
+      return undefined;
+    }
+    const handle = window.setTimeout(() => setToast(null), 2000);
+    return () => window.clearTimeout(handle);
+  }, [toast]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     try {
       await login({ email, password });
-      navigate("/explore");
+      setToast("Login successful.");
+      window.setTimeout(() => navigate("/explore"), 600);
     } catch {
       // Error is handled in the hook.
     }
@@ -21,6 +32,11 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      {toast ? (
+        <div className="fixed top-6 left-1/2 z-50 -translate-x-1/2">
+          <Toast message={toast} type="success" />
+        </div>
+      ) : null}
       <div className="mx-auto grid max-w-5xl gap-8 px-5 py-10 lg:grid-cols-2 lg:px-8">
         <section className="flex flex-col justify-center gap-5 rounded-3xl bg-gradient-to-br from-emerald-600 via-emerald-500 to-amber-200 p-8 text-white shadow-lg sm:p-10">
           <div className="text-xs uppercase tracking-[2px] text-white/80">

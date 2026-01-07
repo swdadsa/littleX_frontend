@@ -118,6 +118,57 @@ export async function fetchTrendingHashtags() {
   return response.data.data;
 }
 
+export type FollowingPost = {
+  id: number;
+  user_id: number;
+  name: string;
+  username: string;
+  description: string | null;
+  avatar_path: string | null;
+  body: string;
+  likes_count: number;
+  comments_count: number;
+  youalreadyliked: boolean;
+  youalreadyfollowed: boolean;
+  hashtag: {
+    id: number;
+    order: number;
+    post_id: number;
+    hashtag: string;
+    created_at: string;
+    updated_at: string;
+    deleted_at: string | null;
+  }[];
+  image: {
+    id: number;
+    order: number;
+    image_path: string;
+  }[];
+  created_at: string;
+};
+
+export type FollowingPostResponse = {
+  status: boolean;
+  data: {
+    posts: FollowingPost[];
+    current_page: number;
+    last_page: number;
+  };
+};
+
+export async function fetchFollowingPosts(page: number) {
+  const response = await api.get<FollowingPostResponse>(
+    "/posts/getFollowingUserPost",
+    { params: { page } }
+  );
+
+  if (!response.data.status) {
+    throw new Error("Failed to load following posts");
+  }
+
+  return response.data.data;
+}
+
 export type LikeResponse = {
   status: boolean;
   data: string;

@@ -603,7 +603,7 @@ export default function Profile() {
         +
       </button>
       {toast ? (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2">
+        <div className="fixed top-6 left-1/2 z-50 -translate-x-1/2">
           <Toast message={toast.message} type={toast.type} />
         </div>
       ) : null}

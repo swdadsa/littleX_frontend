@@ -1,10 +1,11 @@
-﻿import { FormEvent, useState } from "react";
+﻿import { FormEvent, useMemo, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { followUser } from "../api/users";
 import { useRecommendFollow } from "../hooks/useRecommendFollow";
 import { useTrendingHashtags } from "../hooks/useTrendingHashtags";
 import { useUserSearch } from "../hooks/useUserSearch";
 import { getApiErrorMessage } from "../utils/apiError";
+import { getUser } from "../utils/user";
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
   [
@@ -18,6 +19,7 @@ export default function Shell() {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [focused, setFocused] = useState(false);
+  const user = useMemo(() => getUser(), []);
   const { results, loading } = useUserSearch(query);
   const {
     hashtags: trending,
@@ -90,20 +92,20 @@ export default function Shell() {
                       No users found.
                     </div>
                   ) : null}
-                  {results.map((user) => (
+                  {results.map((userItem) => (
                     <button
-                      key={user.id}
+                      key={userItem.id}
                       className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-slate-50"
                       type="button"
                       onMouseDown={() => {
-                        navigate(`/profile/${user.username}`);
+                        navigate(`/profile/${userItem.username}`);
                         setFocused(false);
                       }}
                     >
-                      {user.avatar_path ? (
+                      {userItem.avatar_path ? (
                         <img
-                          src={user.avatar_path}
-                          alt={user.name}
+                          src={userItem.avatar_path}
+                          alt={userItem.name}
                           className="h-9 w-9 rounded-full object-cover"
                         />
                       ) : (
@@ -111,10 +113,10 @@ export default function Shell() {
                       )}
                       <div>
                         <strong className="block text-sm text-slate-900">
-                          {user.name}
+                          {userItem.name}
                         </strong>
                         <span className="text-xs text-slate-500">
-                          @{user.username}
+                          @{userItem.username}
                         </span>
                       </div>
                     </button>
@@ -123,10 +125,18 @@ export default function Shell() {
               ) : null}
             </form>
             <div className="flex items-center gap-3">
+              {user?.avatar_path ? (
+                <img
+                  src={user.avatar_path}
+                  alt={user.name}
+                  className="h-8 w-8 rounded-full object-cover"
+                />
+              ) : (
+                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-amber-200 to-emerald-400" />
+              )}
               <button className="rounded-full px-3 py-2 text-sm text-slate-500 transition hover:text-slate-900">
                 Notifications
               </button>
-              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-amber-200 to-emerald-400" />
             </div>
           </header>
           <div className="min-h-0 flex-1 overflow-y-auto pb-10">
