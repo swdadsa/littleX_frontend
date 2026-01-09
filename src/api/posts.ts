@@ -166,7 +166,31 @@ export async function fetchFollowingPosts(page: number) {
     throw new Error("Failed to load following posts");
   }
 
-  return response.data.data;
+  const payload = response.data.data;
+  const safePosts = Array.isArray(payload.posts) ? payload.posts : [];
+
+  return {
+    ...payload,
+    posts: safePosts
+  };
+}
+
+export async function fetchRandomPosts(page: number) {
+  const response = await api.get<FollowingPostResponse>("/posts/getRandomPost", {
+    params: { page }
+  });
+
+  if (!response.data.status) {
+    throw new Error("Failed to load random posts");
+  }
+
+  const payload = response.data.data;
+  const safePosts = Array.isArray(payload.posts) ? payload.posts : [];
+
+  return {
+    ...payload,
+    posts: safePosts
+  };
 }
 
 export type LikeResponse = {

@@ -1,6 +1,8 @@
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   fetchFollowingPosts,
+  fetchRandomPosts,
   togglePostLike,
   type FollowingPost
 } from "../api/posts";
@@ -20,9 +22,15 @@ const prompts = [
 ];
 
 export default function Explore() {
+  const navigate = useNavigate();
   const [posts, setPosts] = useState<FollowingPost[]>([]);
   const [page, setPage] = useState(0);
   const [lastPage, setLastPage] = useState(1);
+  const [randomPage, setRandomPage] = useState(0);
+  const [randomLastPage, setRandomLastPage] = useState(1);
+  const [feedMode, setFeedMode] = useState<"following" | "random">(
+    "following"
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -33,8 +41,8 @@ export default function Explore() {
   const user = useMemo(() => getUser(), []);
   const [composerOpen, setComposerOpen] = useState(false);
 
-  const loadPage = useCallback(
-    async (nextPage: number) => {
+  const loadFollowingPage = useCallback(
+    async (nextPage: number, replace = false) => {
       if (loading) {
         return;
       }
@@ -43,10 +51,33 @@ export default function Explore() {
       try {
         const data = await fetchFollowingPosts(nextPage);
         setPosts((prev) =>
-          nextPage === 1 ? data.posts : [...prev, ...data.posts]
+          replace ? data.posts : [...prev, ...data.posts]
         );
         setPage(data.current_page);
         setLastPage(data.last_page);
+      } catch (err) {
+        setError(getApiErrorMessage(err));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [loading]
+  );
+
+  const loadRandomPage = useCallback(
+    async (nextPage: number, replace = false) => {
+      if (loading) {
+        return;
+      }
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await fetchRandomPosts(nextPage);
+        setPosts((prev) =>
+          replace ? data.posts : [...prev, ...data.posts]
+        );
+        setRandomPage(data.current_page);
+        setRandomLastPage(data.last_page);
       } catch (err) {
         setError(getApiErrorMessage(err));
       } finally {
@@ -110,15 +141,18 @@ export default function Explore() {
   }, []);
 
   const { submit, loading: creating, error: createError } = useCreatePost(() => {
-    loadPage(1);
+    setFeedMode("following");
+    setRandomPage(0);
+    setRandomLastPage(1);
+    loadFollowingPage(1, true);
     setComposerOpen(false);
   });
 
   useEffect(() => {
     if (page === 0) {
-      loadPage(1);
+      loadFollowingPage(1, true);
     }
-  }, [page, loadPage]);
+  }, [page, loadFollowingPage]);
 
   useEffect(() => {
     if (!sentinelRef.current) {
@@ -127,8 +161,24 @@ export default function Explore() {
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && !loading && page < lastPage) {
-          loadPage(page + 1);
+        if (!entries[0].isIntersecting || loading) {
+          return;
+        }
+
+        if (feedMode === "following") {
+          if (page < lastPage) {
+            loadFollowingPage(page + 1);
+            return;
+          }
+          if (randomPage < randomLastPage || randomPage === 0) {
+            setFeedMode("random");
+            loadRandomPage(randomPage === 0 ? 1 : randomPage + 1, false);
+          }
+          return;
+        }
+
+        if (randomPage < randomLastPage) {
+          loadRandomPage(randomPage + 1);
         }
       },
       { rootMargin: "200px" }
@@ -136,7 +186,16 @@ export default function Explore() {
 
     observer.observe(sentinelRef.current);
     return () => observer.disconnect();
-  }, [loading, page, lastPage, loadPage]);
+  }, [
+    loading,
+    page,
+    lastPage,
+    randomPage,
+    randomLastPage,
+    feedMode,
+    loadFollowingPage,
+    loadRandomPage
+  ]);
 
   return (
     <div className="flex flex-col gap-5">
@@ -157,24 +216,13 @@ export default function Explore() {
           ) : (
             <div className="h-11 w-11 rounded-full bg-gradient-to-br from-amber-200 to-emerald-400" />
           )}
-          <div>
-            <input
-              className="mb-3 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-slate-300 focus:outline-none"
-              placeholder="What is on your mind?"
-              onFocus={() => setComposerOpen(true)}
-            />
-            <div className="flex flex-wrap gap-2">
-              {prompts.map((prompt) => (
-                <button
-                  key={prompt}
-                  className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700"
-                  type="button"
-                >
-                  {prompt}
-                </button>
-              ))}
-            </div>
-          </div>
+          <button
+            className="flex min-h-[44px] items-center rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm text-slate-500 transition hover:border-slate-300"
+            type="button"
+            onClick={() => setComposerOpen(true)}
+          >
+            What is on your mind?
+          </button>
           <button
             className="rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-orange-600"
             type="button"
@@ -182,6 +230,18 @@ export default function Explore() {
           >
             Post
           </button>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {prompts.map((prompt) => (
+            <button
+              key={prompt}
+              className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700"
+              type="button"
+              onClick={() => setComposerOpen(true)}
+            >
+              {prompt}
+            </button>
+          ))}
         </div>
       </section>
       <section className="flex flex-col gap-4">
@@ -201,9 +261,7 @@ export default function Explore() {
                   <button
                     className="flex items-center"
                     type="button"
-                    onClick={() => {
-                      window.location.href = `/profile/${post.username}`;
-                    }}
+                    onClick={() => navigate(`/profile/${post.username}`)}
                   >
                     {post.avatar_path ? (
                       <img

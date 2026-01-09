@@ -11,6 +11,7 @@ import {
 import Comments from "../components/Comments";
 import EditProfileModal from "../components/EditProfileModal";
 import FollowListModal from "../components/FollowListModal";
+import ImagePreviewModal from "../components/ImagePreviewModal";
 import PostComposerModal from "../components/PostComposerModal";
 import PostImageCarousel from "../components/PostImageCarousel";
 import Toast from "../components/Toast";
@@ -31,6 +32,7 @@ export default function Profile() {
     "followers" | "following" | null
   >(null);
   const [editOpen, setEditOpen] = useState(false);
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
   const currentUser = useMemo(() => getUser(), []);
   const isSelf =
     !username ||
@@ -223,30 +225,77 @@ export default function Profile() {
             {profileUser &&
             "cover_path" in profileUser &&
             profileUser.cover_path ? (
-              <img
-                src={profileUser.cover_path}
-                alt="Cover"
-                className="h-full w-full object-cover"
-              />
+              <button
+                className="h-full w-full"
+                type="button"
+                onClick={() => setPreviewSrc(profileUser.cover_path ?? null)}
+              >
+                <img
+                  src={profileUser.cover_path}
+                  alt="Cover"
+                  className="h-full w-full object-cover"
+                />
+              </button>
             ) : null}
           </div>
           <div className="-mt-12 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex items-center gap-4">
+            <div className="flex flex-1 items-center gap-4">
               {profileUser?.avatar_path ? (
-                <img
-                  src={profileUser.avatar_path}
-                  alt={profileUser.name}
-                  className="h-[72px] w-[72px] rounded-full object-cover"
-                />
+                <button
+                  type="button"
+                  onClick={() => setPreviewSrc(profileUser.avatar_path ?? null)}
+                  className="h-[72px] w-[72px]"
+                >
+                  <img
+                    src={profileUser.avatar_path}
+                    alt={profileUser.name}
+                    className="h-[72px] w-[72px] rounded-full object-cover"
+                  />
+                </button>
               ) : (
                 <div className="h-[72px] w-[72px] rounded-full bg-gradient-to-br from-amber-200 to-emerald-400" />
               )}
-              <div>
+              <div className="flex-1">
                 <h2 className="text-xl font-semibold text-slate-900">
                   {profileUser?.name ?? "Riley Hart"}
                 </h2>
                 <p className="text-sm text-slate-500">
                   @{profileUser?.username ?? "riley.h"}
+                </p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-xl p-1">
+                    <strong className="block text-2xl text-slate-900">
+                      {profileUser?.posts_count ?? 0}
+                    </strong>
+                    <span className="text-sm text-slate-500">posts</span>
+                  </div>
+                  <div>
+                    <button
+                      className="rounded-xl p-1 text-left transition hover:bg-slate-100"
+                      type="button"
+                      onClick={() => setFollowModal("followers")}
+                    >
+                      <strong className="block text-2xl text-slate-900">
+                        {profileUser?.follower_count ?? 0}
+                      </strong>
+                      <span className="text-sm text-slate-500">followers</span>
+                    </button>
+                  </div>
+                  <div>
+                    <button
+                      className="rounded-xl p-1 text-left transition hover:bg-slate-100"
+                      type="button"
+                      onClick={() => setFollowModal("following")}
+                    >
+                      <strong className="block text-2xl text-slate-900">
+                        {profileUser?.following_count ?? 0}
+                      </strong>
+                      <span className="text-sm text-slate-500">following</span>
+                    </button>
+                  </div>
+                </div>
+                <p className="mt-3 text-sm text-slate-500">
+                  {profileUser?.description ?? ""}
                 </p>
               </div>
             </div>
@@ -293,71 +342,6 @@ export default function Profile() {
                 Edit profile
               </button>
             )}
-          </div>
-        </section>
-        <section className="grid gap-5 lg:grid-cols-2">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h3 className="mb-3 text-base font-semibold text-slate-900">
-              Your stats
-            </h3>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-xl p-1">
-                <strong className="block text-2xl text-slate-900">
-                  {profileUser?.posts_count ?? 0}
-                </strong>
-                <span className="text-sm text-slate-500">posts</span>
-              </div>
-              <div>
-                <button
-                  className="rounded-xl p-1 text-left transition hover:bg-slate-100"
-                  type="button"
-                  onClick={() => setFollowModal("followers")}
-                >
-                  <strong className="block text-2xl text-slate-900">
-                    {profileUser?.follower_count ?? 0}
-                  </strong>
-                  <span className="text-sm text-slate-500">followers</span>
-                </button>
-              </div>
-              <div>
-                <button
-                  className="rounded-xl p-1 text-left transition hover:bg-slate-100"
-                  type="button"
-                  onClick={() => setFollowModal("following")}
-                >
-                  <strong className="block text-2xl text-slate-900">
-                    {profileUser?.following_count ?? 0}
-                  </strong>
-                  <span className="text-sm text-slate-500">following</span>
-                </button>
-              </div>
-            </div>
-            <p className="mt-3 text-sm text-slate-500">
-              {profileUser?.description ?? ""}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h3 className="mb-3 text-base font-semibold text-slate-900">
-              Recent highlights
-            </h3>
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-sm text-slate-500">Top post</span>
-                <strong className="text-sm text-slate-900">
-                  9.2k impressions
-                </strong>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-sm text-slate-500">Most liked</span>
-                <strong className="text-sm text-slate-900">
-                  1.1k reactions
-                </strong>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-sm text-slate-500">New followers</span>
-                <strong className="text-sm text-slate-900">+142 this week</strong>
-              </div>
-            </div>
           </div>
         </section>
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -593,6 +577,11 @@ export default function Profile() {
         error={createError}
         onClose={() => setComposerOpen(false)}
         onSubmit={handleCreatePost}
+      />
+      <ImagePreviewModal
+        src={previewSrc}
+        open={!!previewSrc}
+        onClose={() => setPreviewSrc(null)}
       />
       <button
         className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-slate-900 text-2xl text-white shadow-lg transition hover:bg-slate-800"

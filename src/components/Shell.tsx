@@ -186,7 +186,7 @@ export default function Shell() {
               {suggestions.map((item) => (
                 <button
                   key={item.id}
-                  className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left transition hover:bg-slate-50"
+                  className="flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left transition hover:bg-slate-50"
                   type="button"
                   onClick={() => navigate(`/profile/${item.username}`)}
                 >
@@ -199,14 +199,16 @@ export default function Shell() {
                   ) : (
                     <div className="h-11 w-11 rounded-full bg-gradient-to-br from-amber-200 to-emerald-400" />
                   )}
-                  <div className="flex-1">
-                    <strong className="block text-sm">{item.name}</strong>
-                    <small className="text-xs text-slate-500">
+                  <div className="min-w-0 flex-1">
+                    <strong className="block truncate text-sm">
+                      {item.name}
+                    </strong>
+                    <small className="block truncate text-xs text-slate-500">
                       @{item.username}
                     </small>
                   </div>
                   <button
-                    className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-70"
+                    className="shrink-0 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-70"
                     type="button"
                     disabled={
                       followLoadingId === item.id ||
