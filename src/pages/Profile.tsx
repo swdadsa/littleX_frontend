@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import type { User } from "../api/auth";
 import {
   fetchUserById,
@@ -24,6 +24,7 @@ import { getUser, setUser } from "../utils/user";
 
 export default function Profile() {
   const { username } = useParams();
+  const navigate = useNavigate();
   const [user, setUserState] = useState<User | null>(null);
   const [viewUser, setViewUser] = useState<UserSummary | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -456,6 +457,85 @@ export default function Profile() {
                         </span>
                       ))}
                     </div>
+                  ) : null}
+                  {post.share && !Array.isArray(post.share) ? (
+                    <button
+                      className="mt-4 w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-left transition hover:border-slate-300"
+                      type="button"
+                      onClick={() => navigate(`/post/${post.share.post_id}`)}
+                    >
+                      <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        Shared post
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="group relative">
+                          {post.share.user.avatar ? (
+                            <img
+                              src={post.share.user.avatar}
+                              alt={post.share.user.name}
+                              className="h-9 w-9 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="h-9 w-9 rounded-full bg-gradient-to-br from-amber-200 to-emerald-400" />
+                          )}
+                          <div className="pointer-events-none absolute left-0 top-full z-20 mt-2 w-56 translate-y-2 rounded-2xl border border-slate-200 bg-white p-3 opacity-0 shadow-lg transition group-hover:translate-y-0 group-hover:opacity-100">
+                            <div className="flex items-center gap-3">
+                              {post.share.user.avatar ? (
+                                <img
+                                  src={post.share.user.avatar}
+                                  alt={post.share.user.name}
+                                  className="h-10 w-10 rounded-full object-cover"
+                                />
+                              ) : (
+                                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-amber-200 to-emerald-400" />
+                              )}
+                              <div>
+                                <div className="text-sm font-semibold text-slate-900">
+                                  {post.share.user.name}
+                                </div>
+                                <div className="text-xs text-slate-500">
+                                  @{post.share.user.username}
+                                </div>
+                              </div>
+                            </div>
+                            <p className="mt-2 text-xs text-slate-500">
+                              {post.share.user.description ?? ""}
+                            </p>
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <strong className="text-sm text-slate-900">
+                              {post.share.user.name}
+                            </strong>
+                            <span className="text-[11px] text-slate-400">
+                              {formatRelativeTime(post.share.created_at)}
+                            </span>
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            @{post.share.user.username}
+                          </div>
+                        </div>
+                      </div>
+                      <p className="mt-3 text-sm text-slate-600">
+                        {post.share.body}
+                      </p>
+                      {post.share.hashtag && post.share.hashtag.length > 0 ? (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {post.share.hashtag.map((tag) => (
+                            <span
+                              key={`${post.id}-share-${tag.id}`}
+                              className="rounded-full bg-white px-2 py-1 text-xs text-slate-600"
+                            >
+                              #{tag.hashtag}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                      <div className="mt-3">
+                        <PostImageCarousel images={post.share.images ?? []} />
+                      </div>
+                    </button>
                   ) : null}
                   <PostImageCarousel images={post.image ?? []} />
                 </div>

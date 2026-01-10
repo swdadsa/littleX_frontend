@@ -20,8 +20,68 @@ export type Post = {
     updated_at: string;
     deleted_at: string | null;
   }[];
+  share:
+    | {
+        post_id: number;
+        user_id: number;
+        body: string;
+        created_at: string;
+        user: {
+          id: number;
+          name: string;
+          username: string;
+          description: string | null;
+          avatar: string | null;
+        };
+        images: {
+          id: number;
+          order: number;
+          image_path: string;
+        }[];
+        hashtag: {
+          id: number;
+          post_id: number;
+          order: number;
+          hashtag: string;
+        }[];
+      }
+    | []
+    | null;
   youalreadyliked: boolean;
   created_at: string;
+};
+
+export type PostDetail = {
+  id: number;
+  user_id: number;
+  body: string;
+  likes_count: number;
+  comments_count: number;
+  image: {
+    id: number;
+    order: number;
+    image_path: string;
+  }[];
+  hashtag: {
+    id: number;
+    post_id: number;
+    order: number;
+    hashtag: string;
+  }[];
+  created_at: string;
+  user: {
+    id: number;
+    name: string;
+    username: string;
+    description: string | null;
+    avatar: string | null;
+  };
+  youalreadyliked?: boolean;
+};
+
+export type PostDetailResponse = {
+  status: boolean;
+  data: PostDetail;
 };
 
 export type PostsResponse = {
@@ -51,6 +111,16 @@ export async function fetchPosts(userId?: number) {
   }
 
   return response.data.data.map(normalizePost);
+}
+
+export async function fetchPostById(postId: number) {
+  const response = await api.get<PostDetailResponse>(`/posts/${postId}`);
+
+  if (!response.data.status) {
+    throw new Error("Failed to load post");
+  }
+
+  return response.data.data;
 }
 
 export type CreatePostResponse = {
