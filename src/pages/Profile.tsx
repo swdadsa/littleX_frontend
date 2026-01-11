@@ -8,12 +8,14 @@ import {
   type UserSummary,
   unfollowUser
 } from "../api/users";
+import { sharePost } from "../api/posts";
 import Comments from "../components/Comments";
 import EditProfileModal from "../components/EditProfileModal";
 import FollowListModal from "../components/FollowListModal";
 import ImagePreviewModal from "../components/ImagePreviewModal";
 import PostComposerModal from "../components/PostComposerModal";
 import PostImageCarousel from "../components/PostImageCarousel";
+import SharePostModal from "../components/SharePostModal";
 import Toast from "../components/Toast";
 import { useCreatePost } from "../hooks/useCreatePost";
 import { useUpdateProfile } from "../hooks/useUpdateProfile";
@@ -61,6 +63,9 @@ export default function Profile() {
   const [menuOpen, setMenuOpen] = useState<number | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [sharePostId, setSharePostId] = useState<number | null>(null);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
   const { submit, loading: creating, error: createError } = useCreatePost(() => {
     reload();
     setComposerOpen(false);
@@ -445,24 +450,47 @@ export default function Profile() {
                       ) : null}
                     </div>
                   </div>
-                  <p className="text-sm text-slate-600">{post.body}</p>
-                  {post.hashtag && post.hashtag.length > 0 ? (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {post.hashtag.map((tag) => (
-                        <span
-                          key={`${post.id}-${tag.id}`}
-                          className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600"
-                        >
-                          #{tag.hashtag}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
+                  <div
+                    className={isSelf ? "" : "cursor-pointer"}
+                    role={isSelf ? undefined : "button"}
+                    tabIndex={isSelf ? undefined : 0}
+                    onClick={
+                      isSelf
+                        ? undefined
+                        : () => navigate(`/post/${post.id}`)
+                    }
+                    onKeyDown={
+                      isSelf
+                        ? undefined
+                        : (event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              navigate(`/post/${post.id}`);
+                            }
+                          }
+                    }
+                  >
+                    <p className="text-sm text-slate-600">{post.body}</p>
+                    {post.hashtag && post.hashtag.length > 0 ? (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {post.hashtag.map((tag) => (
+                          <span
+                            key={`${post.id}-${tag.id}`}
+                            className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600"
+                          >
+                            #{tag.hashtag}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
                   {post.share && !Array.isArray(post.share) ? (
                     <button
                       className="mt-4 w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-left transition hover:border-slate-300"
                       type="button"
-                      onClick={() => navigate(`/post/${post.share.post_id}`)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        navigate(`/post/${post.share.post_id}`);
+                      }}
                     >
                       <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
                         Shared post
@@ -532,12 +560,22 @@ export default function Profile() {
                           ))}
                         </div>
                       ) : null}
-                      <div className="mt-3">
+                      <div
+                        className="mt-3"
+                        onClick={(event) => event.stopPropagation()}
+                        role="presentation"
+                      >
                         <PostImageCarousel images={post.share.images ?? []} />
                       </div>
                     </button>
                   ) : null}
-                  <PostImageCarousel images={post.image ?? []} />
+                  <div
+                    className="mt-2"
+                    onClick={(event) => event.stopPropagation()}
+                    role="presentation"
+                  >
+                    <PostImageCarousel images={post.image ?? []} />
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-3 text-sm text-slate-500">
                   <button
@@ -565,6 +603,18 @@ export default function Profile() {
                   >
                     {post.comments_count} comments
                   </button>
+                  {!isSelf && (!post.share || Array.isArray(post.share)) ? (
+                    <button
+                      className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:text-slate-900"
+                      type="button"
+                      onClick={() => {
+                        setSharePostId(post.id);
+                        setShareError(null);
+                      }}
+                    >
+                      Share
+                    </button>
+                  ) : null}
                 </div>
                 <Comments postId={post.id} open={!!openComments[post.id]} />
               </article>
@@ -657,6 +707,33 @@ export default function Profile() {
         error={createError}
         onClose={() => setComposerOpen(false)}
         onSubmit={handleCreatePost}
+      />
+      <SharePostModal
+        open={sharePostId !== null}
+        loading={shareLoading}
+        error={shareError}
+        onClose={() => {
+          setSharePostId(null);
+          setShareError(null);
+        }}
+        onSubmit={async (body) => {
+          if (!sharePostId) {
+            return;
+          }
+          setShareLoading(true);
+          setShareError(null);
+          try {
+            await sharePost(sharePostId, body);
+            setSharePostId(null);
+            setToast({ message: "Shared post.", type: "success" });
+          } catch (err) {
+            const message = getApiErrorMessage(err);
+            setShareError(message);
+            setToast({ message: message, type: "error" });
+          } finally {
+            setShareLoading(false);
+          }
+        }}
       />
       <ImagePreviewModal
         src={previewSrc}

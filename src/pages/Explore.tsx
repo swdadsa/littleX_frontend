@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   fetchFollowingPosts,
   fetchRandomPosts,
+  sharePost,
   togglePostLike,
   type FollowingPost
 } from "../api/posts";
@@ -10,6 +11,8 @@ import { followUser, unfollowUser } from "../api/users";
 import Comments from "../components/Comments";
 import PostComposerModal from "../components/PostComposerModal";
 import PostImageCarousel from "../components/PostImageCarousel";
+import SharePostModal from "../components/SharePostModal";
+import Toast from "../components/Toast";
 import { useCreatePost } from "../hooks/useCreatePost";
 import { getApiErrorMessage } from "../utils/apiError";
 import { formatRelativeTime } from "../utils/time";
@@ -40,6 +43,13 @@ export default function Explore() {
   const [followLoadingId, setFollowLoadingId] = useState<number | null>(null);
   const user = useMemo(() => getUser(), []);
   const [composerOpen, setComposerOpen] = useState(false);
+  const [sharePostId, setSharePostId] = useState<number | null>(null);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    type?: "success" | "error";
+  } | null>(null);
 
   const loadFollowingPage = useCallback(
     async (nextPage: number, replace = false) => {
@@ -146,7 +156,28 @@ export default function Explore() {
     setRandomLastPage(1);
     loadFollowingPage(1, true);
     setComposerOpen(false);
+    setToast({ message: "Post created.", type: "success" });
   });
+
+  useEffect(() => {
+    if (!toast) {
+      return undefined;
+    }
+    const handle = window.setTimeout(() => setToast(null), 2500);
+    return () => window.clearTimeout(handle);
+  }, [toast]);
+
+  useEffect(() => {
+    if (createError) {
+      setToast({ message: createError, type: "error" });
+    }
+  }, [createError]);
+
+  useEffect(() => {
+    if (error) {
+      setToast({ message: error, type: "error" });
+    }
+  }, [error]);
 
   useEffect(() => {
     if (page === 0) {
@@ -307,29 +338,139 @@ export default function Explore() {
                   </small>
                 </div>
               </div>
-              <button
-                className="rounded-full px-3 py-1 text-sm text-slate-500 transition hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-70"
-                type="button"
-                disabled={followLoadingId === post.user_id}
-                onClick={() => toggleFollow(post.user_id, post.youalreadyfollowed)}
-              >
-                {post.youalreadyfollowed ? "Following" : "Follow"}
-              </button>
+              {user?.id === post.user_id ? null : (
+                <button
+                  className="rounded-full px-3 py-1 text-sm text-slate-500 transition hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-70"
+                  type="button"
+                  disabled={followLoadingId === post.user_id}
+                  onClick={() =>
+                    toggleFollow(post.user_id, post.youalreadyfollowed)
+                  }
+                >
+                  {post.youalreadyfollowed ? "Following" : "Follow"}
+                </button>
+              )}
             </div>
-            <p className="text-sm text-slate-600">{post.body}</p>
-            {post.hashtag && post.hashtag.length > 0 ? (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {post.hashtag.map((tag) => (
-                  <span
-                    key={`${post.id}-${tag.id}`}
-                    className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600"
+            <div
+              className="cursor-pointer"
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate(`/post/${post.id}`)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  navigate(`/post/${post.id}`);
+                }
+              }}
+            >
+              {post.body ? (
+                <p className="text-sm text-slate-600">{post.body}</p>
+              ) : null}
+              {post.hashtag && post.hashtag.length > 0 ? (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {post.hashtag.map((tag) => (
+                    <span
+                      key={`${post.id}-${tag.id}`}
+                      className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600"
+                    >
+                      #{tag.hashtag}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+              {post.share && !Array.isArray(post.share) ? (
+                <button
+                  className="mt-4 w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-left transition hover:border-slate-300"
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    navigate(`/post/${post.share.post_id}`);
+                  }}
+                >
+                  <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Shared post
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="group relative">
+                      {post.share.user.avatar ? (
+                        <img
+                          src={post.share.user.avatar}
+                          alt={post.share.user.name}
+                          className="h-9 w-9 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="h-9 w-9 rounded-full bg-gradient-to-br from-amber-200 to-emerald-400" />
+                      )}
+                      <div className="pointer-events-none absolute left-0 top-full z-20 mt-2 w-56 translate-y-2 rounded-2xl border border-slate-200 bg-white p-3 opacity-0 shadow-lg transition group-hover:translate-y-0 group-hover:opacity-100">
+                        <div className="flex items-center gap-3">
+                          {post.share.user.avatar ? (
+                            <img
+                              src={post.share.user.avatar}
+                              alt={post.share.user.name}
+                              className="h-10 w-10 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-amber-200 to-emerald-400" />
+                          )}
+                          <div>
+                            <div className="text-sm font-semibold text-slate-900">
+                              {post.share.user.name}
+                            </div>
+                            <div className="text-xs text-slate-500">
+                              @{post.share.user.username}
+                            </div>
+                          </div>
+                        </div>
+                        <p className="mt-2 text-xs text-slate-500">
+                          {post.share.user.description ?? ""}
+                        </p>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <strong className="text-sm text-slate-900">
+                          {post.share.user.name}
+                        </strong>
+                        <span className="text-[11px] text-slate-400">
+                          {formatRelativeTime(post.share.created_at)}
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        @{post.share.user.username}
+                      </div>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-sm text-slate-600">
+                    {post.share.body}
+                  </p>
+                  {post.share.hashtag && post.share.hashtag.length > 0 ? (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {post.share.hashtag.map((tag) => (
+                        <span
+                          key={`${post.id}-share-${tag.id}`}
+                          className="rounded-full bg-white px-2 py-1 text-xs text-slate-600"
+                        >
+                          #{tag.hashtag}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                  <div
+                    className="mt-3"
+                    onClick={(event) => event.stopPropagation()}
+                    role="presentation"
                   >
-                    #{tag.hashtag}
-                  </span>
-                ))}
+                    <PostImageCarousel images={post.share.images ?? []} />
+                  </div>
+                </button>
+              ) : null}
+              <div
+                className="mt-2"
+                onClick={(event) => event.stopPropagation()}
+                role="presentation"
+              >
+                <PostImageCarousel images={post.image ?? []} />
               </div>
-            ) : null}
-            <PostImageCarousel images={post.image ?? []} />
+            </div>
             <div className="flex flex-wrap gap-2 text-sm text-slate-500">
               <button
                 className={[
@@ -356,6 +497,18 @@ export default function Explore() {
               >
                 {post.comments_count} comments
               </button>
+              {!post.share || Array.isArray(post.share) ? (
+                <button
+                  className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:text-slate-900"
+                  type="button"
+                  onClick={() => {
+                    setSharePostId(post.id);
+                    setShareError(null);
+                  }}
+                >
+                  Share
+                </button>
+              ) : null}
             </div>
             <Comments postId={post.id} open={!!openComments[post.id]} />
           </article>
@@ -379,6 +532,33 @@ export default function Explore() {
         onClose={() => setComposerOpen(false)}
         onSubmit={submit}
       />
+      <SharePostModal
+        open={sharePostId !== null}
+        loading={shareLoading}
+        error={shareError}
+        onClose={() => {
+          setSharePostId(null);
+          setShareError(null);
+        }}
+        onSubmit={async (body) => {
+          if (!sharePostId) {
+            return;
+          }
+          setShareLoading(true);
+          setShareError(null);
+          try {
+            await sharePost(sharePostId, body);
+            setSharePostId(null);
+            setToast({ message: "Shared post.", type: "success" });
+          } catch (err) {
+            const message = getApiErrorMessage(err);
+            setShareError(message);
+            setToast({ message: message, type: "error" });
+          } finally {
+            setShareLoading(false);
+          }
+        }}
+      />
       <button
         className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-slate-900 text-2xl text-white shadow-lg transition hover:bg-slate-800"
         type="button"
@@ -387,6 +567,11 @@ export default function Explore() {
       >
         +
       </button>
+      {toast ? (
+        <div className="fixed top-6 left-1/2 z-50 -translate-x-1/2">
+          <Toast message={toast.message} type={toast.type} />
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -62,12 +62,26 @@ export type PostDetail = {
     order: number;
     image_path: string;
   }[];
-  hashtag: {
-    id: number;
-    post_id: number;
-    order: number;
-    hashtag: string;
-  }[];
+  hashtag:
+    | {
+        id: number;
+        post_id: number;
+        order: number;
+        hashtag: string;
+        created_at?: string;
+        updated_at?: string;
+        deleted_at?: string | null;
+      }[]
+    | {
+        id: number;
+        post_id: number;
+        order: number;
+        hashtag: string;
+        created_at?: string;
+        updated_at?: string;
+        deleted_at?: string | null;
+      }
+    | null;
   created_at: string;
   user: {
     id: number;
@@ -76,6 +90,33 @@ export type PostDetail = {
     description: string | null;
     avatar: string | null;
   };
+  share?:
+    | {
+        post_id: number;
+        user_id: number;
+        body: string;
+        created_at: string;
+        user: {
+          id: number;
+          name: string;
+          username: string;
+          description: string | null;
+          avatar: string | null;
+        };
+        images: {
+          id: number;
+          order: number;
+          image_path: string;
+        }[];
+        hashtag: {
+          id: number;
+          post_id: number;
+          order: number;
+          hashtag: string;
+        }[];
+      }
+    | []
+    | null;
   youalreadyliked?: boolean;
 };
 
@@ -214,6 +255,33 @@ export type FollowingPost = {
     order: number;
     image_path: string;
   }[];
+  share:
+    | {
+        post_id: number;
+        user_id: number;
+        body: string;
+        created_at: string;
+        user: {
+          id: number;
+          name: string;
+          username: string;
+          description: string | null;
+          avatar: string | null;
+        };
+        images: {
+          id: number;
+          order: number;
+          image_path: string;
+        }[];
+        hashtag: {
+          id: number;
+          post_id: number;
+          order: number;
+          hashtag: string;
+        }[];
+      }
+    | []
+    | null;
   created_at: string;
 };
 
@@ -275,6 +343,24 @@ export async function togglePostLike(postId: number) {
 
   if (!response.data.status) {
     throw new Error("Failed to update like");
+  }
+
+  return response.data.data;
+}
+
+export type SharePostResponse = {
+  status: boolean;
+  data: string;
+};
+
+export async function sharePost(sharePostId: number, body: string) {
+  const response = await api.post<SharePostResponse>("/posts/share", {
+    share_post_id: sharePostId,
+    body
+  });
+
+  if (!response.data.status) {
+    throw new Error(response.data.data || "Failed to share post");
   }
 
   return response.data.data;
