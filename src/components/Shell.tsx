@@ -1,11 +1,13 @@
-﻿import { FormEvent, useMemo, useState } from "react";
+﻿import { FormEvent, useEffect, useMemo, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { logout } from "../api/auth";
 import { followUser } from "../api/users";
 import { useRecommendFollow } from "../hooks/useRecommendFollow";
 import { useTrendingHashtags } from "../hooks/useTrendingHashtags";
 import { useUserSearch } from "../hooks/useUserSearch";
 import { getApiErrorMessage } from "../utils/apiError";
 import { getUser } from "../utils/user";
+import Toast from "./Toast";
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
   [
@@ -33,6 +35,11 @@ export default function Shell() {
   } = useRecommendFollow();
   const [followingIds, setFollowingIds] = useState<number[]>([]);
   const [followLoadingId, setFollowLoadingId] = useState<number | null>(null);
+  const [logoutLoading, setLogoutLoading] = useState(false);
+  const [toast, setToast] = useState<{
+    message: string;
+    type?: "success" | "error";
+  } | null>(null);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -42,6 +49,30 @@ export default function Shell() {
     }
     navigate(`/search?query=${encodeURIComponent(trimmed)}`);
     setFocused(false);
+  };
+
+  useEffect(() => {
+    if (!toast) {
+      return undefined;
+    }
+    const handle = window.setTimeout(() => setToast(null), 2500);
+    return () => window.clearTimeout(handle);
+  }, [toast]);
+
+  const handleLogout = async () => {
+    if (logoutLoading) {
+      return;
+    }
+    setLogoutLoading(true);
+    try {
+      await logout();
+      setToast({ message: "\u767b\u51fa\u6210\u529f", type: "success" });
+      window.setTimeout(() => navigate("/login"), 600);
+    } catch (err) {
+      setToast({ message: getApiErrorMessage(err), type: "error" });
+    } finally {
+      setLogoutLoading(false);
+    }
   };
 
   return (
@@ -58,9 +89,14 @@ export default function Shell() {
             <NavLink className={linkClass} to="/profile">
               Profile
             </NavLink>
-            <NavLink className={linkClass} to="/login">
-              Sign out
-            </NavLink>
+            <button
+              className={linkClass({ isActive: false })}
+              type="button"
+              onClick={handleLogout}
+              disabled={logoutLoading}
+            >
+              {logoutLoading ? "Signing out..." : "Sign out"}
+            </button>
           </nav>
         </aside>
         <main className="flex min-h-0 flex-col gap-6">
@@ -236,6 +272,11 @@ export default function Shell() {
           </div>
         </aside>
       </div>
+      {toast ? (
+        <div className="fixed top-6 left-1/2 z-50 -translate-x-1/2">
+          <Toast message={toast.message} type={toast.type} />
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -1,5 +1,7 @@
 import api from "./client";
 import { setToken } from "../utils/token";
+import { clearToken } from "../utils/token";
+import { clearUser } from "../utils/user";
 
 export type LoginPayload = {
   email: string;
@@ -33,4 +35,21 @@ export async function login(payload: LoginPayload) {
 
   setToken(response.data.data.token);
   return response.data;
+}
+
+export type LogoutResponse = {
+  status: boolean;
+  data: string;
+};
+
+export async function logout() {
+  const response = await api.post<LogoutResponse>("/user/logout");
+
+  if (!response.data.status) {
+    throw new Error(response.data.data || "Logout failed");
+  }
+
+  clearToken();
+  clearUser();
+  return response.data.data;
 }
