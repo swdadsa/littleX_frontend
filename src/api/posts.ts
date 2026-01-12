@@ -161,7 +161,14 @@ export async function fetchPostById(postId: number) {
     throw new Error("Failed to load post");
   }
 
-  return response.data.data;
+  const data = response.data.data;
+  return {
+    ...data,
+    youalreadyliked:
+      data.youalreadyliked === true ||
+      data.youalreadyliked === 1 ||
+      data.youalreadyliked === "true"
+  };
 }
 
 export type CreatePostResponse = {
