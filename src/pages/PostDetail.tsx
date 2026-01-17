@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { fetchPostById, sharePost, togglePostLike, type PostDetail } from "../api/posts";
 import Comments from "../components/Comments";
 import PostImageCarousel from "../components/PostImageCarousel";
@@ -11,11 +11,15 @@ import { formatRelativeTime } from "../utils/time";
 export default function PostDetail() {
   const { postId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [post, setPost] = useState<PostDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [likeLoading, setLikeLoading] = useState(false);
   const [openComments, setOpenComments] = useState(true);
+  const highlightCommentId =
+    (location.state as { highlightCommentId?: number } | null)
+      ?.highlightCommentId ?? null;
   const [shareOpen, setShareOpen] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
@@ -50,6 +54,12 @@ export default function PostDetail() {
       .catch((err) => setError(getApiErrorMessage(err)))
       .finally(() => setLoading(false));
   }, [postId]);
+
+  useEffect(() => {
+    if (highlightCommentId) {
+      setOpenComments(true);
+    }
+  }, [highlightCommentId]);
 
   useEffect(() => {
     if (!toast) {
@@ -292,7 +302,11 @@ export default function PostDetail() {
                 </button>
               ) : null}
             </div>
-            <Comments postId={post.id} open={openComments} />
+            <Comments
+              postId={post.id}
+              open={openComments}
+              highlightCommentId={highlightCommentId}
+            />
           </div>
         ) : null}
       </section>

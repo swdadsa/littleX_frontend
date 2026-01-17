@@ -1,17 +1,19 @@
-﻿import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { logout } from "../api/auth";
+import { fetchNotificationCount } from "../api/notifications";
 import { followUser } from "../api/users";
 import { useRecommendFollow } from "../hooks/useRecommendFollow";
 import { useTrendingHashtags } from "../hooks/useTrendingHashtags";
 import { useUserSearch } from "../hooks/useUserSearch";
 import { getApiErrorMessage } from "../utils/apiError";
 import { getUser } from "../utils/user";
+import { getEcho } from "../utils/reverb";
 import Toast from "./Toast";
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
   [
-    "rounded-xl px-3 py-2 text-sm font-semibold transition",
+    "w-full rounded-xl px-3 py-2 text-left text-sm font-semibold transition",
     isActive
       ? "bg-white text-slate-900 shadow-sm"
       : "text-slate-600 hover:bg-white hover:text-slate-900"
@@ -40,6 +42,8 @@ export default function Shell() {
     message: string;
     type?: "success" | "error";
   } | null>(null);
+  const [notificationCount, setNotificationCount] = useState<number>(0);
+  const notificationTimerRef = useRef<number | null>(null);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -58,6 +62,96 @@ export default function Shell() {
     const handle = window.setTimeout(() => setToast(null), 2500);
     return () => window.clearTimeout(handle);
   }, [toast]);
+
+  useEffect(() => {
+    let active = true;
+    fetchNotificationCount()
+      .then((count) => {
+        if (active) {
+          setNotificationCount(count);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setNotificationCount(0);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!user?.id) {
+      // eslint-disable-next-line no-console
+      console.warn("Reverb: missing user id, skip subscribe.");
+      return undefined;
+    }
+    const echo = getEcho();
+    if (!echo) {
+      // eslint-disable-next-line no-console
+      console.warn("Reverb: echo not initialized.");
+      return undefined;
+    }
+    const channelName = `App.Models.Users.${user.id}`;
+    let channel: ReturnType<typeof echo.private> | null = null;
+    try {
+      channel = echo.private(channelName);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(`Reverb: failed to subscribe ${channelName}`, err);
+      return undefined;
+    }
+
+    // eslint-disable-next-line no-console
+    console.info(`Reverb: subscribing ${channelName}`);
+
+    if (typeof channel.subscribed === "function") {
+      channel.subscribed(() => {
+        // eslint-disable-next-line no-console
+        console.log(`Subscribed to ${channelName}`);
+      });
+    }
+    if (typeof channel.error === "function") {
+      channel.error((error: unknown) => {
+        // eslint-disable-next-line no-console
+        console.error(`Subscription error: ${channelName}`, error);
+      });
+    }
+
+    const notify = (payload?: unknown) => {
+      // eslint-disable-next-line no-console
+      console.log("Reverb: notification received", payload);
+      if (notificationTimerRef.current !== null) {
+        return;
+      }
+      notificationTimerRef.current = window.setTimeout(() => {
+        notificationTimerRef.current = null;
+        fetchNotificationCount()
+          .then((count) => {
+            setNotificationCount(count);
+          })
+          .catch(() => {
+            setNotificationCount(0);
+          });
+      }, 2000);
+    };
+
+    if (typeof channel.notification === "function") {
+      channel.notification(notify);
+    } else if (typeof channel.listen === "function") {
+      channel.listen(".Illuminate\\Notifications\\Events\\BroadcastNotificationCreated", notify);
+    }
+
+    return () => {
+      if (notificationTimerRef.current !== null) {
+        window.clearTimeout(notificationTimerRef.current);
+        notificationTimerRef.current = null;
+      }
+      echo.leave(channelName);
+    };
+  }, [user?.id]);
 
   const handleLogout = async () => {
     if (logoutLoading) {
@@ -85,6 +179,16 @@ export default function Shell() {
           <nav className="flex flex-col gap-2">
             <NavLink className={linkClass} to="/explore">
               Explore
+            </NavLink>
+            <NavLink className={linkClass} to="/notifications">
+              <span className="flex w-full items-center justify-between gap-2">
+                <span>Notifications</span>
+                {notificationCount > 0 ? (
+                  <span className="min-w-[22px] rounded-full bg-rose-500 px-2 py-0.5 text-center text-xs font-semibold text-white">
+                    {notificationCount}
+                  </span>
+                ) : null}
+              </span>
             </NavLink>
             <NavLink className={linkClass} to="/profile">
               Profile

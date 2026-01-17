@@ -1,17 +1,34 @@
-﻿import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useCommentActions, useComments } from "../hooks/useComments";
 import { formatRelativeTime } from "../utils/time";
 
 type CommentsProps = {
   postId: number;
   open: boolean;
+  highlightCommentId?: number | null;
 };
 
-export default function Comments({ postId, open }: CommentsProps) {
+export default function Comments({
+  postId,
+  open,
+  highlightCommentId
+}: CommentsProps) {
   const { comments, loading, error, reload } = useComments(postId, open);
   const { likeComment, addComment, actionLoadingId, creating, error: actionErr } =
     useCommentActions(postId, reload);
   const [text, setText] = useState("");
+  const [activeHighlightId, setActiveHighlightId] = useState<number | null>(
+    highlightCommentId ?? null
+  );
+
+  useEffect(() => {
+    if (!highlightCommentId) {
+      return;
+    }
+    setActiveHighlightId(highlightCommentId);
+    const handle = window.setTimeout(() => setActiveHighlightId(null), 3500);
+    return () => window.clearTimeout(handle);
+  }, [highlightCommentId]);
 
   if (!open) {
     return null;
@@ -32,7 +49,12 @@ export default function Comments({ postId, open }: CommentsProps) {
       {comments.map((comment) => (
         <div
           key={comment.id}
-          className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-3"
+          className={[
+            "flex items-start gap-3 rounded-xl border bg-white p-3 transition",
+            comment.id === activeHighlightId
+              ? "border-amber-400 ring-2 ring-amber-200 animate-pulse"
+              : "border-slate-200"
+          ].join(" ")}
         >
           {comment.user_avatar ? (
             <img
@@ -109,3 +131,4 @@ export default function Comments({ postId, open }: CommentsProps) {
     </div>
   );
 }
+
