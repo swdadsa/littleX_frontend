@@ -180,7 +180,11 @@ export default function Shell() {
             <NavLink className={linkClass} to="/explore">
               Explore
             </NavLink>
-            <NavLink className={linkClass} to="/notifications">
+            <NavLink
+              className={linkClass}
+              to="/notifications"
+              onClick={() => setNotificationCount(0)}
+            >
               <span className="flex w-full items-center justify-between gap-2">
                 <span>Notifications</span>
                 {notificationCount > 0 ? (
